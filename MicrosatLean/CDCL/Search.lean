@@ -164,19 +164,4 @@ def runFor : Nat → Machine → Progress
     | .finished result => .finished result
     | .running next => runFor fuel next
 
-/-- Unbounded execution is confined to this IO driver. The underlying state
-transition and resumable runner remain transparent, total Lean definitions. -/
-private partial def drive (machine : Machine) : IO SolveResult := do
-  match runFor 4096 machine with
-  | .finished result => return result
-  | .running next => drive next
-
-/-- Initialize and solve a formula without delegating to an external solver. -/
-def solve (formula : Formula) (config : Config := {}) : IO (Except String SolveResult) := do
-  match initState formula config with
-  | .error message => return .error message
-  | .ok none => return .ok (.unsat {})
-  | .ok (some state) =>
-    return .ok (← drive { solver := state, decision := state.head })
-
 end MicrosatLean.CDCL

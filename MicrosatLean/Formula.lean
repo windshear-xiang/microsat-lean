@@ -34,4 +34,10 @@ structure Formula where
 def Formula.satisfiedBy (formula : Formula) (model : Array Bool) : Bool :=
   formula.clauses.all fun clause => clause.any fun lit => lit.satisfiedBy model
 
+/-- Check declared variable bounds, including exclusion of the reserved
+zero variable. Empty formulas and empty clauses are valid CNF syntax. -/
+def Formula.wellFormed (formula : Formula) : Bool :=
+  formula.clauses.all fun clause =>
+    clause.all fun lit => decide (0 < lit.var ∧ lit.var ≤ formula.numVars)
+
 end MicrosatLean

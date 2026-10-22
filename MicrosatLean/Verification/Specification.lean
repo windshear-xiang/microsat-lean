@@ -31,6 +31,32 @@ def ClauseWellFormed (n : Nat) (clause : Array Lit) : Prop :=
 def WellFormed (formula : Formula) : Prop :=
   ∀ clause ∈ formula.clauses, ClauseWellFormed formula.numVars clause
 
+/-- The executable bounds precheck decides exactly the existing logical
+input specification; it does not inspect a solver answer or a model. -/
+theorem formula_wellFormed_iff (formula : Formula) :
+    formula.wellFormed = true ↔ WellFormed formula := by
+  simp only [Formula.wellFormed, Array.all_eq_true, decide_eq_true_eq]
+  constructor
+  · intro checked clause clauseMember lit litMember
+    obtain ⟨i, beforeClause, value⟩ := Array.mem_iff_getElem.mp clauseMember
+    obtain ⟨j, beforeLiteral, literalValue⟩ := Array.mem_iff_getElem.mp litMember
+    have bounds := checked i beforeClause j (by simpa only [value] using beforeLiteral)
+    simpa only [value, literalValue] using bounds
+  · intro valid i beforeClause j beforeLiteral
+    exact valid _ (Array.getElem_mem beforeClause) _ (Array.getElem_mem beforeLiteral)
+
+theorem formula_wellFormed_false_iff (formula : Formula) :
+    formula.wellFormed = false ↔ ¬WellFormed formula := by
+  rw [← formula_wellFormed_iff]
+  exact Bool.eq_false_iff
+
+/-- The runtime branch is the finite Boolean bounds check. Its logical
+certificate is erased, so arbitrary literal quantifiers need no choice. -/
+instance wellFormedDecidable (formula : Formula) : Decidable (WellFormed formula) :=
+  if checked : formula.wellFormed = true then
+    isTrue ((formula_wellFormed_iff formula).mp checked)
+  else isFalse (fun valid => checked ((formula_wellFormed_iff formula).mpr valid))
+
 /-- The executable model includes the reserved zero slot and all declared variables. -/
 def Covers (model : Array Bool) (n : Nat) : Prop := n < model.size
 

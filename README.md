@@ -75,7 +75,7 @@ the run. `.agent-memory/` contains only concise, durable agent notes.
 
 The complete native suite passed 657/657 checks: all 128 fixtures, all 512
 brute-force cases and all 17 malformed inputs. The slowest corpus case took
-1.845 seconds under a three-second limit on the development machine. The Lean
+1.815 seconds under a three-second limit on the development machine. The Lean
 regressions also pass. Differential checks against a C reference matched all
 96 structured/SATLIB statuses and conflict counts after applying the same input
 normalization; the reference changed only the original four-GiB arena reserve
@@ -83,13 +83,14 @@ to 16 MiB for these tests. The checked-in C source remains unchanged.
 
 ## Verification status
 
-End-to-end solver correctness and search termination have not yet been formally
-proved. There are no added axioms, `sorry` proofs, or unsafe implementations.
-The parser, storage operations, conflict analysis, `step` and `runFor` are total
-Lean definitions. Only the thin unbounded IO execution driver is `partial`.
-`runFor` returns a resumable machine on fuel exhaustion, never a SAT/UNSAT answer.
-An axiom audit of the CDCL core lists only Lean's standard `propext` and
-`Quot.sound`; parser diagnostics additionally depend on `Classical.choice`.
+The actual core CDCL solver is proved correct and terminating for every
+well-formed `Formula` and every `Config`. A SAT result contains a complete model
+of the input's standard CNF; an UNSAT result means that CNF has no assignment.
+The public `CDCL.solve` interface executes this verified total solver. There
+are no added axioms, `sorry` proofs, unsafe implementations, or partial drivers.
+`runFor` remains available as a total resumable API; fuel exhaustion returns a
+machine. The unbounded total evaluator follows the same actual `step` function
+and is proved equal to a finite `runFor` execution.
 
 The independent `MicrosatLean/Verification/` subtree uses the pinned toolchain's
 `Std.Sat.CNF` API. Its checked results currently cover:
@@ -98,10 +99,13 @@ The independent `MicrosatLean/Verification/` subtree uses the pinned toolchain's
 | --- | --- |
 | `Specification` | Evaluation agreement and satisfiability/UNSAT equivalence between executable formulas and standard CNFs |
 | `Logic` | Resolution soundness, ordered clause minimization, model-preserving learning rules, and a canonical clause space of size `3^n` |
-| `Representation` | Bounds, actual clause allocation, assignment/trail/phase updates, root-preserving restart, move-to-front order preservation, and semantic reason rules |
-| `Propagation` | Actual replacement-scan correctness, unit-assignment semantics, and the SAT rule under assignment coverage and propagation closure |
-| `Analysis` | The actual minimizer changes only mark values; exact bounded/cache/decision cases |
-| `Search` | Actual decision-scan completeness and assumptions, equivalence to its previous loop, runner composition, arithmetic progress, and termination lifting from a decreasing reachable-state rank |
+| `Representation` | Bounds, genuine packed database layout and meaning, actual clause/watch allocation, assignment/trail/phase updates, root-preserving restart, and move-to-front order preservation |
+| `Initialization` | Actual normalization preserves clause models; well-formed initialization never errors, early UNSAT is sound, and successful initialization establishes database, trail, reason-graph, and complete watch-list invariants including cross-head reference uniqueness |
+| `Propagation` | Actual replacement/unit branches, complete watch movement and retention, genuine linked-list cursor bounds excluding fuel exhaustion, and completed-watch witnesses for unit closure |
+| `Analysis` | Actual reason expansion, resolution, recursive minimization, UIP assertion, decision-prefix history, canonical learned-clause freshness, and cleanup of transient minimization marks |
+| `Reduction` | Actual compaction layout and meaning, scheduled limit/count progress, watch filtering, and retention/relocation of genuine active root reasons |
+| `Search` | Concrete global machine invariants from actual initialization, preservation and result validity for all four phases, saved watch truth across backjumps/restarts, a strictly decreasing well-founded rank, and a computable total evaluator |
+| `Solver` | Closed SAT-model validity, UNSAT soundness and termination of the initialized solver, with a computable input-bound check at the public entry point |
 
 Check the proof modules and audit all their declarations, including private
 helpers, with:
@@ -111,13 +115,19 @@ lake build MicrosatLean.Verification
 lake env lean tests/Verification.lean
 ```
 
-The audit permits only Lean's standard `propext`, `Classical.choice`, and
-`Quot.sound` axioms. Conditional preservation and termination-lifting theorems
-still require their hypotheses to be proved for the actual search. In
-particular, linked-watch coverage and propagation closure, first-UIP and
-recursive minimization soundness, asserting-clause freshness, initialization
-and database-reduction invariants, and a decreasing global rank remain open.
-The partial IO driver has not yet been replaced by a verified total runner.
+The audit checks private and generated declarations too, and permits only
+Lean's standard `propext`, `Classical.choice`, and `Quot.sound` axioms. The main
+entry theorem is `MicrosatLean.Verification.solveVerified_correct` in
+`MicrosatLean/Verification/Solver.lean`; `solveVerified_ok_valid` covers every
+successful returned result. `Search.initialized_search_terminates` proves
+finite actual search, and `solveWellFormed_runFor` connects the total evaluator
+to the existing runner. Their search preservation and rank premises are proved
+for the concrete algorithm.
+
+The proof boundary starts at `Formula` with declared literal bounds. DIMACS
+parsing and the thin filesystem/printing IO interface are covered by runtime
+tests. Proofs and rank calculations erase from the native total runner, whose
+generated C is a tail loop over the actual `step` function.
 
 The [DIMACS CNF test corpus](tests/cnf/README.md) contains 128 boundary,
 structured and SATLIB fixtures with expected SAT/UNSAT results. Validate it with:

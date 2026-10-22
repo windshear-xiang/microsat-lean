@@ -5,8 +5,8 @@ import Lean.Elab.Command
 /-!
 Audit every declaration in the verification namespace, including private
 helpers, for project axioms or admitted proofs. Standard Lean foundations are
-permitted explicitly. Building the proof modules remains the kernel check;
-this audit does not establish their unproved integration hypotheses.
+permitted explicitly. Building the proof modules checks the proofs in Lean's
+kernel; this additional audit checks their axiom dependencies.
 -/
 
 open Lean Elab Command in

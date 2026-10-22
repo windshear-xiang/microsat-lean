@@ -1,3 +1,3 @@
 import MicrosatLean.Formula
 import MicrosatLean.Dimacs
-import MicrosatLean.CDCL.Search
+import MicrosatLean.Solver
