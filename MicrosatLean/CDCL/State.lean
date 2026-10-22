@@ -150,7 +150,7 @@ def bump (s : State) (lit : Lit) : State := Id.run do
 
 /-- Remove learned watches while retaining original links and their order.
 Each list is acyclic and has at most `arena.size` entries in a valid state. -/
-private def removeLearnedWatches (s : State) : State := Id.run do
+def removeLearnedWatches (s : State) : State := Id.run do
   let mut s := s
   for lit in [2:s.first.size] do
     let mut ref := s.first[lit]!
