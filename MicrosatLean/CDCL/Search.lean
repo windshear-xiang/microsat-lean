@@ -64,7 +64,7 @@ def nextDecision (s : State) (cursor : Nat) : Nat :=
   nextDecisionScan (s.nVars + 1) s cursor
 
 /-- Reattach the two arrays temporarily owned by the propagation loop. -/
-@[inline] private def restoreWatchArrays (s : State) (arena first : Array Nat) : State :=
+@[inline] def restoreWatchArrays (s : State) (arena first : Array Nat) : State :=
   { s with arena := arena, first := first }
 
 /-- Traverse one false literal's watch list in the reference solver's order.
@@ -77,7 +77,7 @@ the temporarily detached state on its own.
 The initial arena length bounds an acyclic watch list. A replacement cannot be
 the current false literal, so moving a watch never adds to the list being scanned.
 Fuel exhaustion still returns a resumable cursor without a SAT/UNSAT claim. -/
-private def propagateWatches : Nat → State → Array Nat → Array Nat → Nat → Nat → Bool → Lit → Nat → Progress
+def propagateWatches : Nat → State → Array Nat → Array Nat → Nat → Nat → Bool → Lit → Nat → Progress
   | 0, s, arena, first, decision, oldLemmas, root, lit, previous =>
     .running ⟨restoreWatchArrays s arena first, decision, .watch, oldLemmas, root, lit, previous⟩
   | fuel + 1, s, arena, first, decision, oldLemmas, root, lit, previous => Id.run do
