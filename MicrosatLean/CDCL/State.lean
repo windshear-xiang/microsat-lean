@@ -216,38 +216,54 @@ def reduceDB (s : State) (k : Nat) : State := Id.run do
 
 end State
 
-/-- Validate and normalize input clauses, then construct the initial state.
-Normalization removes repeated literals and discards tautologies in linear time
-using per-clause stamps. `none` detects an empty clause or conflicting units;
-other consequences are deliberately left to watched-literal propagation. -/
-def initState (formula : Formula) (config : Config := {}) : Except String (Option State) := do
-  let n := max 1 formula.numVars
-  let mut previous := Array.replicate (n + 1) 0
-  let mut next := Array.replicate (n + 1) 0
-  for var in [1:n + 1] do
-    previous := previous.set! var (var - 1)
-    next := next.set! (var - 1) var
-  let mut s : State := {
+/-- Empty packed database and initial descending decision order. Direct indexed
+construction names the initial link values without a mutable setup loop. -/
+def emptyState (numVars : Nat) (config : Config := {}) : State :=
+  let n := max 1 numVars
+  {
     nVars := n, arena := #[0, 0]
     first := Array.replicate (2 * (n + 1)) 0
     marks := Array.replicate (2 * (n + 1)) 0
     reasons := Array.replicate (n + 1) 0
     phases := Array.replicate (n + 1) false
     trail := Array.replicate (n + 1) 0
-    previous, next, head := n, maxLemmas := config.initialLemmaLimit, config }
-  let mut stamps := Array.replicate (2 * (n + 1)) 0
+    previous := Array.ofFn fun i : Fin (n + 1) => i.val - 1
+    next := Array.ofFn fun i : Fin (n + 1) => if i.val < n then i.val + 1 else 0
+    head := n, maxLemmas := config.initialLemmaLimit, config }
+
+/-- One clause's normalized literals and the shared per-clause stamp table. -/
+structure NormalizedClause where
+  lits : Array Lit
+  stamps : Array Nat
+  tautology : Bool
+
+/-- Validate a clause, remove repeated literals, and detect complementary
+pairs. The caller chooses a fresh nonzero stamp for each input clause. -/
+def normalizeClause (numVars stamp : Nat) (stamps : Array Nat) (clause : Array Lit) :
+    Except String NormalizedClause := do
+  let mut result : NormalizedClause := ⟨#[], stamps, false⟩
+  for lit in clause do
+    if lit.var == 0 || lit.var > numVars then
+      throw s!"literal {lit.toInt} is outside declared variable range 1..{numVars}"
+    if result.stamps[lit.negate]! == stamp then
+      result := { result with tautology := true }
+    if result.stamps[lit]! != stamp then
+      result := { result with stamps := result.stamps.set! lit stamp, lits := result.lits.push lit }
+  return result
+
+/-- Validate and normalize input clauses, then construct the initial state.
+Normalization removes repeated literals and discards tautologies in linear time
+using per-clause stamps. `none` detects an empty clause or conflicting units;
+other consequences are deliberately left to watched-literal propagation. -/
+def initState (formula : Formula) (config : Config := {}) : Except String (Option State) := do
+  let mut s := emptyState formula.numVars config
+  let mut stamps := Array.replicate (2 * (s.nVars + 1)) 0
   for idx in [:formula.clauses.size] do
     let stamp := idx + 1
-    let mut lits : Array Lit := #[]
-    let mut tautology := false
-    for lit in formula.clauses[idx]! do
-      if lit.var == 0 || lit.var > formula.numVars then
-        throw s!"literal {lit.toInt} is outside declared variable range 1..{formula.numVars}"
-      if stamps[lit.negate]! == stamp then tautology := true
-      if stamps[lit]! != stamp then
-        stamps := stamps.set! lit stamp
-        lits := lits.push lit
-    if !tautology then
+    let normalized ← normalizeClause formula.numVars stamp stamps formula.clauses[idx]!
+    stamps := normalized.stamps
+    let lits := normalized.lits
+    if !normalized.tautology then
       if lits.isEmpty then return none
       let (nextState, clauseId) := s.addClause lits true
       s := nextState
