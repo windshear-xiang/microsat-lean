@@ -22,6 +22,10 @@ private theorem markClause_maxLemmas (s : State) (start : Nat) :
     (markClause s start).maxLemmas = s.maxLemmas := by
   simpa only using congrArg State.maxLemmas (markClause_frame s start).restore
 
+private theorem markClause_nVars (s : State) (start : Nat) :
+    (markClause s start).nVars = s.nVars := by
+  simpa only using congrArg State.nVars (markClause_frame s start).restore
+
 private theorem backjump_nLemmas (s : State) (candidate : Nat) :
     (backjump s candidate).nLemmas = s.nLemmas := by
   simpa only using congrArg State.nLemmas (backjump_frame s candidate).restore
@@ -47,6 +51,12 @@ theorem analyze_maxLemmas (s : State) (conflict : Nat) :
   simp only [analyze, Id.run, pure, addClause_maxLemmas, backjump_maxLemmas,
     LearnedFrame.maxLemmas (buildLearned_frame ..),
     ResolutionFrame.maxLemmas (resolveToUIP_frame ..), markClause_maxLemmas]
+
+theorem analyze_nVars (s : State) (conflict : Nat) :
+    (analyze s conflict).1.nVars = s.nVars := by
+  simp only [analyze, Id.run, pure, addClause_nVars, backjump_nVars,
+    LearnedFrame.nVars (buildLearned_frame ..),
+    ResolutionFrame.nVars (resolveToUIP_frame ..), markClause_nVars]
 
 /-- Actual learning decreases the numeric component once the resulting active
 database is bounded. This is not yet the global search termination theorem. -/

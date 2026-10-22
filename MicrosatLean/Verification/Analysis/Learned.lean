@@ -98,7 +98,7 @@ private theorem LearnedInv.retuple {formula : CNF Nat} {snapshot : State} {count
     ⟨inv.cache.tags, inv.cache.marked, inv.cache.cached⟩,
     inv.unprocessed, inv.processed, inv.retained⟩
 
-private def finishBody (p lit : Nat) (s : State) (learned : Array Lit) (lbd : Nat) (used : Bool) :
+def finishBody (p lit : Nat) (s : State) (learned : Array Lit) (lbd : Nat) (used : Bool) :
     Id (ForInStep LearnedAcc) := Id.run do
   let mut s := s
   let mut lbd := lbd
@@ -111,7 +111,7 @@ private def finishBody (p lit : Nat) (s : State) (learned : Array Lit) (lbd : Na
       s := { s with processed := p }
   return .yield (s.setMark lit 1, learned, lbd, used)
 
-private theorem learnedBody_eq (candidate offset : Nat) (acc : LearnedAcc) :
+theorem learnedBody_eq (candidate offset : Nat) (acc : LearnedAcc) :
     learnedBody candidate offset acc =
       let lit := acc.1.trail[candidate - offset]!
       if acc.1.mark lit == 2 then
@@ -125,12 +125,12 @@ private theorem learnedBody_eq (candidate offset : Nat) (acc : LearnedAcc) :
   · split <;> rfl
   · rfl
 
-private theorem finishBody_yields (p lit : Nat) (s : State) (learned : Array Lit)
+theorem finishBody_yields (p lit : Nat) (s : State) (learned : Array Lit)
     (lbd : Nat) (used : Bool) : ∃ next, finishBody p lit s learned lbd used = .yield next := by
   simp only [finishBody, Id.run, pure]
   split <;> repeat first | split | exact ⟨_, rfl⟩
 
-private theorem learnedBody_yields (candidate offset : Nat) (acc : LearnedAcc) :
+theorem learnedBody_yields (candidate offset : Nat) (acc : LearnedAcc) :
     ∃ next, learnedBody candidate offset acc = .yield next := by
   rw [learnedBody_eq]
   dsimp only
