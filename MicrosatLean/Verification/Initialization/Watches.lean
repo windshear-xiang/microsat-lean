@@ -21,14 +21,29 @@ structure InitialWatchState (s : State) (original : List StoredClause)
   nodup : ∀ entry ∈ original, entry.lits.toList.Nodup
   noClash : ∀ entry ∈ original, Logic.ClauseSpace.NoClash (entry.lits.toList.map literalView)
 
+def InitialUnitMarks (s : State) (entries : List StoredClause) : Prop :=
+  ∀ entry ∈ entries, entry.lits.size = 1 → s.mark (Lit.negate entry.lits[0]!) ≠ 0
+
+private theorem assign_nonzero_mark {s : State} {id : Nat} {root : Bool} {lit : Lit}
+    (marked : s.mark lit ≠ 0) : (s.assign id root).mark lit ≠ 0 := by
+  by_cases same : Lit.negate (s.db id) = lit
+  · subst lit
+    by_cases bound : Lit.negate (s.db id) < s.marks.size
+    · have value : (s.assign id root).mark (Lit.negate (s.db id)) = if root then 6 else 1 :=
+        Array.getElem!_set!_self _ _ _ bound
+      rw [value]
+      cases root <;> decide
+    · simpa only [State.assign, Id.run, pure, State.mark, Array.set!, Array.setIfInBounds, bound, dite_false] using marked
+  · simpa only [assign_mark_other same] using marked
+
 def InitialWatchDatabase (formula : Formula) (index : Nat) (s : State) : Prop :=
   ∃ original heads, Database s original [] ∧
     CNF.BiEntails (inputPrefix formula index) (databaseView original) ∧
-      InitialWatchState s original heads ∧ ReasonDatabase s original
+      InitialWatchState s original heads ∧ ReasonDatabase s original ∧ InitialUnitMarks s original
 
 theorem emptyState_watchDatabase (formula : Formula) (config : Config) :
     InitialWatchDatabase formula 0 (emptyState formula.numVars config) := by
-  refine ⟨[], fun _ => [], emptyState_database _ _, ?_, ?_, ?_⟩
+  refine ⟨[], fun _ => [], emptyState_database _ _, ?_, ?_, ?_, ?_⟩
   · simpa only [inputPrefix_zero, databaseView_nil] using CNF.biEntails_refl
   · constructor
     · exact emptyState_watchList _ _
@@ -36,6 +51,7 @@ theorem emptyState_watchDatabase (formula : Formula) (config : Config) :
   · intro i before
     simp only [emptyState] at before
     omega
+  · simp only [InitialUnitMarks, List.not_mem_nil, false_implies, implies_true]
 
 theorem initial_watchList_assign {s : State} {lit : Lit} {refs : List Nat}
     (list : WatchList s lit refs) (id : Nat) (root : Bool) :
@@ -96,42 +112,6 @@ private theorem clauseWatchHeads_source {heads : Nat → List Nat} {id first sec
       · exact Or.inr (Or.inr same)
       · exact Or.inl old
     · exact Or.inl member
-
-private theorem clauseWatchHeads_source_head {heads : Nat → List Nat} {id first second lit ref : Nat}
-    (member : ref ∈ clauseWatchHeads heads id first second lit) :
-    ref ∈ heads lit ∨ (ref = 2 * id ∧ lit = first) ∨ (ref = 2 * id + 1 ∧ lit = second) := by
-  unfold clauseWatchHeads at member
-  split at member
-  · rcases List.mem_cons.mp member with same | old
-    · exact Or.inr (Or.inl ⟨same, by assumption⟩)
-    · exact Or.inl old
-  · split at member
-    · rcases List.mem_cons.mp member with same | old
-      · exact Or.inr (Or.inr ⟨same, by assumption⟩)
-      · exact Or.inl old
-    · exact Or.inl member
-
-private theorem clauseWatchHeads_unique {s : State} {heads : Nat → List Nat}
-    (lists : ∀ lit, WatchList s lit (heads lit))
-    (unique : ∀ lit other ref, ref ∈ heads lit → ref ∈ heads other → lit = other)
-    (first second : Lit) :
-    ∀ lit other ref,
-      ref ∈ clauseWatchHeads heads (s.arena.size + 2) first second lit →
-      ref ∈ clauseWatchHeads heads (s.arena.size + 2) first second other → lit = other := by
-  intro lit other ref left right
-  rcases clauseWatchHeads_source_head left with oldLeft | firstLeft | secondLeft
-  · rcases clauseWatchHeads_source_head right with oldRight | firstRight | secondRight
-    · exact unique lit other ref oldLeft oldRight
-    · exact False.elim ((lists lit).newRef_not_mem 0 (by decide) (firstRight.1 ▸ oldLeft))
-    · exact False.elim ((lists lit).newRef_not_mem 1 (by decide) (secondRight.1 ▸ oldLeft))
-  · rcases clauseWatchHeads_source_head right with oldRight | firstRight | secondRight
-    · exact False.elim ((lists other).newRef_not_mem 0 (by decide) (firstLeft.1 ▸ oldRight))
-    · exact firstLeft.2.trans firstRight.2.symm
-    · omega
-  · rcases clauseWatchHeads_source_head right with oldRight | firstRight | secondRight
-    · exact False.elim ((lists other).newRef_not_mem 1 (by decide) (secondLeft.1 ▸ oldRight))
-    · omega
-    · exact secondLeft.2.trans secondRight.2.symm
 
 /-- The ghost heads follow exactly the allocator's width test. Their reference
 sources and clause coverage are extended with the same stored database entry. -/
@@ -212,7 +192,7 @@ theorem initializationBody_watchDatabase {formula : Formula} (hWF : WellFormed f
       omega
   obtain ⟨normalized, hNormalize, hSpec⟩ := normalizeClause_correct hInv.coverage hFresh
     (hWF _ hClause)
-  obtain ⟨original, heads, stored, meaning, watched, proper⟩ := database
+  obtain ⟨original, heads, stored, meaning, watched, proper, units⟩ := database
   have finish (current : State) (currentDatabase : InitialWatchDatabase formula (idx + 1) current)
       (execution : initializationBody formula idx (none, s, stamps) =
         .ok (.yield (none, current, normalized.stamps))) :
@@ -221,7 +201,7 @@ theorem initializationBody_watchDatabase {formula : Formula} (hWF : WellFormed f
     have states : current = next := congrArg (fun acc : InitializationAccumulator => acc.2.1) equal
     exact states ▸ currentDatabase
   by_cases tautology : normalized.tautology = true
-  · apply finish s ⟨original, heads, stored, prefix_skip hIdx meaning hSpec tautology, watched, proper⟩
+  · apply finish s ⟨original, heads, stored, prefix_skip hIdx meaning hSpec tautology, watched, proper, units⟩
     simp [initializationBody, hNormalize, tautology, Bind.bind, Except.bind, Pure.pure, Except.pure]
   · have notTautology : normalized.tautology = false := by
       cases equal : normalized.tautology <;> simp_all
@@ -242,8 +222,16 @@ theorem initializationBody_watchDatabase {formula : Formula} (hWF : WellFormed f
         hNonempty hSpec.noDuplicates (hSpec.noClash notTautology)
       have properAdded : ReasonDatabase added.1 (original ++ [⟨added.2, normalized.lits⟩]) := by
         simpa only [added, addClause_assigned] using proper.addClause normalized.lits true
-      have keepAdded : InitialWatchDatabase formula (idx + 1) added.1 :=
-        ⟨_, _, storedAdded, meaningAdded, watchedAdded, properAdded⟩
+      have keepAdded (trueUnit : normalized.lits.size = 1 →
+          added.1.mark (Lit.negate normalized.lits[0]!) ≠ 0) :
+          InitialWatchDatabase formula (idx + 1) added.1 := by
+        refine ⟨_, _, storedAdded, meaningAdded, watchedAdded, properAdded, ?_⟩
+        intro entry member unit
+        rcases List.mem_append.mp member with old | new
+        · simpa only [added, State.mark, addClause_marks] using units entry old unit
+        · have same : entry = ⟨added.2, normalized.lits⟩ := List.mem_singleton.mp new
+          subst entry
+          exact trueUnit unit
       have keepAssigned (unmarked : added.1.mark normalized.lits[0]! = 0)
           (opposite : added.1.mark normalized.lits[0]!.negate = 0) :
           InitialWatchDatabase formula (idx + 1) (added.1.assign added.2 true) := by
@@ -259,7 +247,18 @@ theorem initializationBody_watchDatabase {formula : Formula} (hWF : WellFormed f
           (by simp) true addedValid.arrays addedValid.active addedValid.distinct
           (packed.wellFormed _ member) (by simpa only [head] using unmarked)
           (by simpa only [head] using opposite)
-        exact ⟨_, _, storedAdded.assign _ _, meaningAdded, watchedAdded.assign _ _, assignedProper⟩
+        refine ⟨_, _, storedAdded.assign _ _, meaningAdded, watchedAdded.assign _ _, assignedProper, ?_⟩
+        intro entry storedEntry unitEntry
+        rcases List.mem_append.mp storedEntry with old | new
+        · apply assign_nonzero_mark
+          simpa only [added, State.mark, addClause_marks] using units entry old unitEntry
+        · have same : entry = ⟨added.2, normalized.lits⟩ := List.mem_singleton.mp new
+          subst entry
+          have value : (added.1.assign added.2 true).mark (Lit.negate normalized.lits[0]!) = 6 := by
+            rw [← head]
+            exact Array.getElem!_set!_self _ _ _ (addedValid.arrays.literal_index
+              (packed.wellFormed _ member).negate).1
+          exact fun zero => by rw [value] at zero; contradiction
       by_cases unit : normalized.lits.size = 1
       · have hHeadRead : normalized.lits[0]! = normalized.lits[0] :=
           getElem!_pos normalized.lits 0 (by omega)
@@ -279,10 +278,10 @@ theorem initializationBody_watchDatabase {formula : Formula} (hWF : WellFormed f
               unmarkedIndex, assignedIndex, Bind.bind, Except.bind, Pure.pure, Except.pure]
           · have assignedIndex : (s.addClause normalized.lits true).1.mark normalized.lits[0].negate ≠ 0 := by
               simpa only [added, hHeadRead] using assigned
-            apply finish _ keepAdded
+            apply finish _ (keepAdded (fun _ => assigned))
             simp [initializationBody, hNormalize, notTautology, empty, unit, added,
               unmarkedIndex, assignedIndex, Bind.bind, Except.bind, Pure.pure, Except.pure]
-      · apply finish _ keepAdded
+      · apply finish _ (keepAdded (fun impossible => False.elim (unit impossible)))
         simp [initializationBody, hNormalize, notTautology, empty, unit, added,
           Bind.bind, Except.bind, Pure.pure, Except.pure]
 
@@ -315,10 +314,10 @@ theorem initialization_loop_watchDatabase {formula : Formula} (hWF : WellFormed 
 /-- Successful actual initialization supplies one common database/head witness
 with complete linked lists, every long clause's two distinct watches, and no
 references whose source is a unit or empty clause. -/
-theorem initState_some_watchReasons {formula : Formula} (hWF : WellFormed formula)
+theorem initState_some_watchReasons_units {formula : Formula} (hWF : WellFormed formula)
     {config : Config} {s : State} (hSome : initState formula config = .ok (some s)) :
     ∃ original heads, Database s original [] ∧ DatabaseMeaning (formulaView formula) original [] ∧
-      InitialWatchState s original heads ∧ ReasonDatabase s original := by
+      InitialWatchState s original heads ∧ ReasonDatabase s original ∧ InitialUnitMarks s original := by
   let initial := emptyState formula.numVars config
   let stamps := Array.replicate (2 * (initial.nVars + 1)) 0
   have hInitial : InitializationLoopInvariant formula 0 initial stamps := by
@@ -344,12 +343,20 @@ theorem initState_some_watchReasons {formula : Formula} (hWF : WellFormed formul
       rfl
     have equal := Option.some.inj (Except.ok.inj (initialized.symm.trans hSome))
     subst s
-    obtain ⟨original, heads, stored, meaning, watched, proper⟩ := nextDatabase
-    refine ⟨original, heads, stored, ?_, watched, proper⟩
+    obtain ⟨original, heads, stored, meaning, watched, proper, units⟩ := nextDatabase
+    refine ⟨original, heads, stored, ?_, watched, proper, units⟩
     constructor
     · simpa only [Nat.zero_add, inputPrefix_all] using meaning
     · simp only [databaseView_nil]
       exact CNF.entails_empty
+
+theorem initState_some_watchReasons {formula : Formula} (hWF : WellFormed formula)
+    {config : Config} {s : State} (hSome : initState formula config = .ok (some s)) :
+    ∃ original heads, Database s original [] ∧ DatabaseMeaning (formulaView formula) original [] ∧
+      InitialWatchState s original heads ∧ ReasonDatabase s original := by
+  obtain ⟨original, heads, database, meaning, watches, reasons, _⟩ :=
+    initState_some_watchReasons_units hWF hSome
+  exact ⟨original, heads, database, meaning, watches, reasons⟩
 
 theorem initState_some_watches {formula : Formula} (hWF : WellFormed formula)
     {config : Config} {s : State} (hSome : initState formula config = .ok (some s)) :

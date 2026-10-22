@@ -19,6 +19,8 @@ def InitialTags (s : State) : Prop := ∀ lit, s.mark lit = 0 ∨ s.mark lit = 6
 structure InitialAnalysisData (formula : CNF Nat) (s : State) : Prop where
   units : InitialUnitReasons formula s
   tags : InitialTags s
+  processed : s.processed = 0
+  forced : s.forced = 0
 
 theorem emptyState_analysisData (numVars : Nat) (config : Config) (formula : CNF Nat) :
     InitialAnalysisData formula (emptyState numVars config) := by
@@ -27,6 +29,8 @@ theorem emptyState_analysisData (numVars : Nat) (config : Config) (formula : CNF
     simp [emptyState] at before
   · intro lit
     exact Or.inl (emptyState_mark _ _ _)
+  · rfl
+  · rfl
 
 theorem InitialAnalysisData.addClause {formula : CNF Nat} {s : State}
     (data : InitialAnalysisData formula s) (lits : Array Lit) (original : Bool) :
@@ -38,6 +42,8 @@ theorem InitialAnalysisData.addClause {formula : CNF Nat} {s : State}
     · simpa only [State.reason, addClause_reasons, addClause_trail] using packed.addClause lits
     · simpa only [addClause_trail] using head
   · simpa only [InitialTags, State.mark, addClause_marks] using data.tags
+  · simpa only [addClause_processed] using data.processed
+  · simpa only [addClause_forced] using data.forced
 
 theorem InitialAnalysisData.assign {formula : CNF Nat} {s : State} {id : Nat}
     {lits : Array Lit} (data : InitialAnalysisData formula s) (valid : InitializedRepresentation s)
@@ -79,6 +85,8 @@ theorem InitialAnalysisData.assign {formula : CNF Nat} {s : State} {id : Nat}
       exact Array.getElem!_set!_self s.marks _ _
         (valid.arrays.literal_index literal.negate).1
     · simpa only [assign_mark_other same] using data.tags lit
+  · exact data.processed
+  · exact data.forced
 
 /-- Continuing execution of the actual clause loop retains precise singleton
 reasons; normalized units supply entailment from the complete input CNF. -/
