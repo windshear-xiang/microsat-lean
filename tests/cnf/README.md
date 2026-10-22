@@ -44,8 +44,15 @@ using a three-second per-instance limit. The slowest observed case was the odd
 Glucose, including worker startup. These are measurements, not portable runtime
 guarantees.
 
-The manifest is ready for a future Lean test runner to compare solver decisions.
-The current Lean executable is still the initial skeleton. These are test oracles,
+The native Lean solver runner uses this manifest to check every decision and
+complete SAT model against the original input:
+
+```sh
+python -B tools/test_solver.py
+```
+
+All 128 native solver cases passed a three-second limit on the development
+machine; the slowest observed case took 1.994 seconds. These are test results,
 not Lean proofs of satisfiability, unsatisfiability, or solver correctness.
 
 ## Validation
