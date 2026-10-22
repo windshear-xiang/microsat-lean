@@ -19,6 +19,7 @@ structure InitialWatchState (s : State) (original : List StoredClause)
   nonempty : ∀ entry ∈ original, 0 < entry.lits.size
   unique : ∀ lit other ref, ref ∈ heads lit → ref ∈ heads other → lit = other
   nodup : ∀ entry ∈ original, entry.lits.toList.Nodup
+  noClash : ∀ entry ∈ original, Logic.ClauseSpace.NoClash (entry.lits.toList.map literalView)
 
 def InitialWatchDatabase (formula : Formula) (index : Nat) (s : State) : Prop :=
   ∃ original heads, Database s original [] ∧
@@ -31,16 +32,7 @@ theorem emptyState_watchDatabase (formula : Formula) (config : Config) :
   · simpa only [inputPrefix_zero, databaseView_nil] using CNF.biEntails_refl
   · constructor
     · exact emptyState_watchList _ _
-    · intro entry impossible
-      simp at impossible
-    · intro lit ref impossible
-      simp at impossible
-    · intro entry impossible
-      simp at impossible
-    · intro lit other ref impossible
-      simp at impossible
-    · intro entry impossible
-      simp at impossible
+    all_goals simp
   · intro i before
     simp only [emptyState] at before
     omega
@@ -54,7 +46,31 @@ theorem InitialWatchState.assign {s : State} {original : List StoredClause}
     {heads : Nat → List Nat} (watched : InitialWatchState s original heads) (id : Nat) (root : Bool) :
     InitialWatchState (s.assign id root) original heads :=
   ⟨fun lit => initial_watchList_assign (watched.lists lit) id root,
-    watched.covered, watched.references, watched.nonempty, watched.unique, watched.nodup⟩
+    watched.covered, watched.references, watched.nonempty, watched.unique, watched.nodup, watched.noClash⟩
+
+theorem NormalizationSpec.noClash {numVars stamp : Nat} {old : Array Nat}
+    {clause : Array Lit} {result : NormalizedClause}
+    (spec : NormalizationSpec numVars stamp old clause result) (notTautology : result.tautology = false) :
+    Logic.ClauseSpace.NoClash (result.lits.toList.map literalView) := by
+  intro var positive negative
+  obtain ⟨pos, posMember, posView⟩ := List.mem_map.mp positive
+  obtain ⟨neg, negMember, negView⟩ := List.mem_map.mp negative
+  have sameVar : neg.var = pos.var :=
+    (congrArg Prod.fst negView).trans (congrArg Prod.fst posView).symm
+  have different : neg ≠ pos := by
+    intro equal
+    rw [equal, posView] at negView
+    cases negView
+  rcases literal_eq_or_negate_of_var_eq sameVar with same | opposite
+  · exact different same
+  · have originalPos : pos ∈ clause.toList := by
+      simpa using (spec.membership pos).mp (by simpa using posMember)
+    have originalNeg : pos.negate ∈ clause.toList := by
+      rw [← opposite]
+      simpa using (spec.membership neg).mp (by simpa using negMember)
+    have tautology := spec.tautology.mpr ⟨pos, originalPos, originalNeg⟩
+    rw [notTautology] at tautology
+    cases tautology
 
 theorem normalized_first_two_ne {lits : Array Lit} (noDuplicates : lits.toList.Nodup)
     (wide : 1 < lits.size) : lits[0]! ≠ lits[1]! := by
@@ -123,7 +139,8 @@ theorem InitialWatchState.addClause {s : State} {original : List StoredClause}
     {heads : Nat → List Nat} {lits : Array Lit} (watched : InitialWatchState s original heads)
     (arrays : ArrayBounds s) (reserved : 2 ≤ s.arena.size)
     (wellFormed : ∀ lit ∈ lits, LiteralBound s.nVars lit)
-    (nonempty : 0 < lits.size) (noDuplicates : lits.toList.Nodup) :
+    (nonempty : 0 < lits.size) (noDuplicates : lits.toList.Nodup)
+    (noClash : Logic.ClauseSpace.NoClash (lits.toList.map literalView)) :
     InitialWatchState (s.addClause lits true).1
       (original ++ [⟨(s.addClause lits true).2, lits⟩])
       (fun lit => if 1 < lits.size then
@@ -170,6 +187,11 @@ theorem InitialWatchState.addClause {s : State} {original : List StoredClause}
     · exact watched.nodup entry old
     · have same : entry = ⟨(s.addClause lits true).2, lits⟩ := List.mem_singleton.mp new
       simpa only [same] using noDuplicates
+  · intro entry member
+    rcases List.mem_append.mp member with old | new
+    · exact watched.noClash entry old
+    · have same : entry = ⟨(s.addClause lits true).2, lits⟩ := List.mem_singleton.mp new
+      simpa only [same] using noClash
 
 /-- This clause loop carries the database entries and represented watch heads
 together, so later theorems do not conflate separate existential witnesses. -/
@@ -217,7 +239,7 @@ theorem initializationBody_watchDatabase {formula : Formula} (hWF : WellFormed f
       have storedAdded := stored.addOriginal hInv.state.reserved hWellFormed
       have meaningAdded := prefix_add added.2 hIdx meaning hSpec
       have watchedAdded := watched.addClause valid.arrays hInv.state.reserved hWellFormed
-        hNonempty hSpec.noDuplicates
+        hNonempty hSpec.noDuplicates (hSpec.noClash notTautology)
       have properAdded : ReasonDatabase added.1 (original ++ [⟨added.2, normalized.lits⟩]) := by
         simpa only [added, addClause_assigned] using proper.addClause normalized.lits true
       have keepAdded : InitialWatchDatabase formula (idx + 1) added.1 :=
