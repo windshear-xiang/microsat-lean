@@ -84,3 +84,42 @@ theorem moveIndex_next (selected i : Nat) (positive : 0 < selected) (nonhead : 0
   repeat first | split | omega
 
 end MicrosatLean.Verification.Representation.Order
+
+namespace MicrosatLean.Verification.Representation
+
+open CDCL
+
+theorem MTFOrder.frame {before after : State} {order : List Nat} (valid : MTFOrder before order)
+    (variables : after.nVars = before.nVars) (head : after.head = before.head)
+    (previous : after.previous = before.previous) (next : after.next = before.next) :
+    MTFOrder after order := by
+  simpa only [MTFOrder, variables, head, previous, next] using valid
+
+theorem MTFOrder.assign {s : State} {order : List Nat} (valid : MTFOrder s order)
+    (id : Nat) (root : Bool) : MTFOrder (s.assign id root) order :=
+  valid.frame rfl rfl rfl rfl
+
+theorem MTFOrder.decide {s : State} {order : List Nat} (valid : MTFOrder s order)
+    (var : Nat) : MTFOrder (s.decide var) order := valid.frame rfl rfl rfl rfl
+
+theorem MTFOrder.addClause {s : State} {order : List Nat} (valid : MTFOrder s order)
+    (lits : Array Lit) (original : Bool) : MTFOrder (s.addClause lits original).1 order := by
+  by_cases watches : 1 < lits.size <;> cases original <;>
+    simpa [MTFOrder, State.addClause, State.addWatch, watches] using valid
+
+theorem MTFCoverage.assign {s : State} (valid : MTFCoverage s) (id : Nat) (root : Bool) :
+    MTFCoverage (s.assign id root) := by
+  obtain ⟨order, valid⟩ := valid
+  exact ⟨order, valid.assign id root⟩
+
+theorem MTFCoverage.decide {s : State} (valid : MTFCoverage s) (var : Nat) :
+    MTFCoverage (s.decide var) := by
+  obtain ⟨order, valid⟩ := valid
+  exact ⟨order, valid.decide var⟩
+
+theorem MTFCoverage.addClause {s : State} (valid : MTFCoverage s) (lits : Array Lit)
+    (original : Bool) : MTFCoverage (s.addClause lits original).1 := by
+  obtain ⟨order, valid⟩ := valid
+  exact ⟨order, valid.addClause lits original⟩
+
+end MicrosatLean.Verification.Representation

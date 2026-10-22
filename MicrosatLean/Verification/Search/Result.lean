@@ -1,5 +1,6 @@
 import MicrosatLean.Verification.Search.Decision
 import MicrosatLean.Verification.Propagation.Closure
+import MicrosatLean.Verification.Propagation.DatabaseClosure
 
 namespace MicrosatLean.Verification.Search
 
@@ -35,6 +36,25 @@ theorem validResult_sat_of_decision_zero {formula : Formula} {s : State}
   · apply formula_sat_of_complete_closed wellFormed variables (marksSound_of_trail marks phases)
     · exact nextDecision_zero_all_assigned ordered start hPrefix finished
     · exact closed
+
+/-- The packed database version of the SAT rule permits normalized originals
+and learned clauses. Its model is transported back to the original input. -/
+theorem validResult_sat_of_database {formula : Formula} {s : State}
+    (variables : formula.numVars ≤ s.nVars) (arrays : ArrayBounds s)
+    (marks : MarkedOnTrail s) (phases : TrailPhases s)
+    {original learned : List StoredClause} (database : Database s original learned)
+    (meaning : DatabaseMeaning (formulaView formula) original learned)
+    (closed : DatabaseNoConflict s (original ++ learned))
+    {order : List Nat} (ordered : MTFOrder s order) (start : Nat)
+    (hPrefix : ∀ i, i < start → i < order.length → AssignedVariable s (order.getD i 0))
+    (finished : nextDecision s (order.getD start 0) = 0) :
+    ValidResult formula (.sat s.phases s.stats) := by
+  constructor
+  · unfold Covers
+    rw [arrays.phasesSize]
+    omega
+  · exact input_sat_of_database_closed database meaning (marksSound_of_trail marks phases)
+      (nextDecision_zero_all_assigned ordered start hPrefix finished) closed
 
 /-- The root-conflict rule gives the UNSAT branch of the same result
 specification, with no finite-model restriction on its conclusion. -/
