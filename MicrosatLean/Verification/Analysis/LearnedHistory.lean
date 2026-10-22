@@ -82,7 +82,7 @@ theorem DecisionHistory.buildLearned_birth {formula : CNF Nat} {snapshot s : Sta
   exact buildLearned_birth_closed graph storage trail parents tags uip forcedBefore rootEarlier
     decision lower' retained' zero'
 
-private structure HistoryResolved (before resolved : State) (decision : Nat) : Prop where
+structure HistoryResolved (before resolved : State) (decision : Nat) : Prop where
   storage : ReasonStorage before resolved
   trail : resolved.trail = before.trail
   forced : resolved.forced = before.forced
@@ -90,7 +90,7 @@ private structure HistoryResolved (before resolved : State) (decision : Nat) : P
   uip : UIPResult before before.assigned decision resolved
   rootEarlier : ∀ i, i < before.assigned → resolved.mark before.trail[i]! = 6 → i < decision
 
-private theorem DecisionAnalysisEntry.historyResolved {formula : CNF Nat} {s : State}
+theorem DecisionAnalysisEntry.historyResolved {formula : CNF Nat} {s : State}
     {conflict decision : Nat} {lits : Array Lit} {rank : Lit → Nat}
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) :
     HistoryResolved s (analysisResolved s conflict) decision := by

@@ -15,7 +15,7 @@ theorem SixSubset.trans {before middle after : State}
     (first : SixSubset before middle) (last : SixSubset middle after) : SixSubset before after :=
   fun lit mark => first lit (last lit mark)
 
-private theorem setMark_sixSubset (s : State) (lit value : Nat) (different : value ≠ 6) :
+theorem setMark_sixSubset (s : State) (lit value : Nat) (different : value ≠ 6) :
     SixSubset s (s.setMark lit value) := by
   intro query marked
   by_cases same : lit = query

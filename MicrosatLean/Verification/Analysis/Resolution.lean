@@ -169,7 +169,7 @@ theorem resolutionFrame_markClause (s : State) (start : Nat) :
   refine ⟨?_, frame.marksSize, frame.previousSize, frame.nextSize⟩
   exact congrArg (fun after : State => { after with assigned := s.assigned }) frame.restore
 
-private theorem resolutionBody_frame (s : State) : ResolutionFrame s (resolutionBody s).value := by
+theorem resolutionBody_frame (s : State) : ResolutionFrame s (resolutionBody s).value := by
   simp only [resolutionBody, Id.run, pure]
   split
   · exact resolutionFrame_setAssigned s _

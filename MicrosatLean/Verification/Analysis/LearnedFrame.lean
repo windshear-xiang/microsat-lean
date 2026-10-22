@@ -33,7 +33,7 @@ private theorem learnedFrame_setProcessed (s : State) (p : Nat) :
 private theorem learnedFrame_setMark (s : State) (lit value : Nat) :
     LearnedFrame s (s.setMark lit value) := .ofMarkFrame (markFrame_setMark s lit value)
 
-private theorem learnedBody_frame (candidate offset : Nat) (acc : LearnedAcc) :
+theorem learnedBody_frame (candidate offset : Nat) (acc : LearnedAcc) :
     LearnedFrame acc.1 (learnedBody candidate offset acc).value.1 := by
   simp only [learnedBody, Id.run, pure]
   split
