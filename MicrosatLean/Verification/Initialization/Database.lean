@@ -33,7 +33,7 @@ def DatabasePrefix (formula : Formula) (index : Nat) (s : State) : Prop :=
   ∃ original, Database s original [] ∧
     CNF.BiEntails (inputPrefix formula index) (databaseView original)
 
-private theorem prefix_skip {formula : Formula} {index stamp : Nat} {old : Array Nat}
+theorem prefix_skip {formula : Formula} {index stamp : Nat} {old : Array Nat}
     {normalized : NormalizedClause} {original : List StoredClause}
     (within : index < formula.clauses.size)
     (meaning : CNF.BiEntails (inputPrefix formula index) (databaseView original))
@@ -47,7 +47,7 @@ private theorem prefix_skip {formula : Formula} {index stamp : Nat} {old : Array
   · intro a model
     exact CNF.sat_add.mpr ⟨spec.tautology_sat tautology a, meaning.2 a model⟩
 
-private theorem prefix_add {formula : Formula} {index stamp : Nat} {old : Array Nat}
+theorem prefix_add {formula : Formula} {index stamp : Nat} {old : Array Nat}
     {normalized : NormalizedClause} {original : List StoredClause} (id : Nat)
     (within : index < formula.clauses.size)
     (meaning : CNF.BiEntails (inputPrefix formula index) (databaseView original))
