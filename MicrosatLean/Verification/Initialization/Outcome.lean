@@ -256,11 +256,11 @@ theorem initState_eq_loop (formula : Formula) (config : Config) :
 /-- The actual initialization function never errors on well-formed input.
 Early UNSAT is justified by an empty clause or conflicting entailed units;
 successful states contain only input-entailed root marks. -/
-theorem initState_outcome {formula : Formula} (hWF : WellFormed formula) (config : Config := {}) :
+theorem initState_structured_outcome {formula : Formula} (hWF : WellFormed formula) (config : Config := {}) :
     ∃ result, initState formula config = .ok result ∧
       match result with
       | none => CNF.Unsat (formulaView formula)
-      | some s => RootMarks (formulaView formula) s := by
+      | some s => InitializationStateInvariant formula s := by
   let s := emptyState formula.numVars config
   let stamps := Array.replicate (2 * (s.nVars + 1)) 0
   have hInitial : InitializationLoopInvariant formula 0 s stamps := by
@@ -281,10 +281,29 @@ theorem initState_outcome {formula : Formula} (hWF : WellFormed formula) (config
     rw [hRun]
     rfl
   | ready next nextStamps hNext =>
-    refine ⟨some next, ?_, hNext.state.roots⟩
+    refine ⟨some next, ?_, hNext.state⟩
     rw [initState_eq_loop]
     rw [hRun]
     rfl
+
+theorem initState_outcome {formula : Formula} (hWF : WellFormed formula) (config : Config := {}) :
+    ∃ result, initState formula config = .ok result ∧
+      match result with
+      | none => CNF.Unsat (formulaView formula)
+      | some s => RootMarks (formulaView formula) s := by
+  obtain ⟨result, initialized, checked⟩ := initState_structured_outcome hWF config
+  refine ⟨result, initialized, ?_⟩
+  cases result with
+  | none => exact checked
+  | some s => exact checked.roots
+
+theorem initState_some_variables {formula : Formula} (wellFormed : WellFormed formula)
+    {config : Config} {s : State} (success : initState formula config = .ok (some s)) :
+    s.nVars = max 1 formula.numVars := by
+  obtain ⟨result, initialized, checked⟩ := initState_structured_outcome wellFormed config
+  have equal : result = some s := Except.ok.inj (initialized.symm.trans success)
+  subst result
+  exact checked.variables
 
 theorem initState_no_error {formula : Formula} (hWF : WellFormed formula)
     (config : Config) (message : String) : initState formula config ≠ .error message := by

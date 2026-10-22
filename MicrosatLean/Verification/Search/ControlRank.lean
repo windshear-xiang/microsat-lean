@@ -144,8 +144,8 @@ theorem step_choose_rank {formula : Std.Sat.CNF Nat} (bound variables : Nat)
     (phase : before.phase = .choose) (running : step before = .running after)
     (certificate : StateCertificate formula before.solver original learned heads rank)
     (bounded : before.solver.nLemmas ≤ bound) (variablesEq : before.solver.nVars = variables)
-    (cursorValid : before.decision = 0 ∨
-      (1 ≤ before.decision ∧ before.decision ≤ before.solver.nVars)) :
+    (cursorValid : ¬ before.solver.nLemmas > before.oldLemmas →
+      before.decision = 0 ∨ (1 ≤ before.decision ∧ before.decision ≤ before.solver.nVars)) :
     ControlRankLT (controlRank bound variables after) (controlRank bound variables before) := by
   rcases before with ⟨s, cursor, phase, old, root, lit, previous⟩
   simp only at phase bounded variablesEq certificate cursorValid
@@ -178,7 +178,7 @@ theorem step_choose_rank {formula : Std.Sat.CNF Nat} (bound variables : Nat)
       subst after
       obtain ⟨order, ordered⟩ := certificate.order
       have cursorMember : cursor ∈ order ∨ cursor = 0 := by
-        rcases cursorValid with none | declared
+        rcases cursorValid newLearning with none | declared
         · exact Or.inr none
         · exact Or.inl ((ordered.2.1 cursor).mpr declared)
       have chosenMember := nextDecisionScan_mem_of_nonzero ordered (s.nVars + 1) cursor cursorMember zero
