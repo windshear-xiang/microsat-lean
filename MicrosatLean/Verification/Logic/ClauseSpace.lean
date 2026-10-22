@@ -8,7 +8,7 @@ open Std.Sat
 A finite space of canonical, nontautological clauses. It is a proof-level
 construction, not the executable clause representation. Connecting this bound
 to the solver requires proving that learned clauses have bounded variables and
-that distinct learning events do not repeat their canonical representatives.
+that simultaneously retained clauses have distinct canonical representatives.
 -/
 
 abbrev Literals := List (Literal Nat)

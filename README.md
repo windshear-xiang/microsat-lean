@@ -75,7 +75,7 @@ the run. `.agent-memory/` contains only concise, durable agent notes.
 
 The complete native suite passed 657/657 checks: all 128 fixtures, all 512
 brute-force cases and all 17 malformed inputs. The slowest corpus case took
-1.994 seconds under a three-second limit on the development machine. The Lean
+1.845 seconds under a three-second limit on the development machine. The Lean
 regressions also pass. Differential checks against a C reference matched all
 96 structured/SATLIB statuses and conflict counts after applying the same input
 normalization; the reference changed only the original four-GiB arena reserve
@@ -83,7 +83,7 @@ to 16 MiB for these tests. The checked-in C source remains unchanged.
 
 ## Verification status
 
-This is executable, tested code; solver correctness has not yet been formally
+End-to-end solver correctness and search termination have not yet been formally
 proved. There are no added axioms, `sorry` proofs, or unsafe implementations.
 The parser, storage operations, conflict analysis, `step` and `runFor` are total
 Lean definitions. Only the thin unbounded IO execution driver is `partial`.
@@ -91,13 +91,33 @@ Lean definitions. Only the thin unbounded IO execution driver is `partial`.
 An axiom audit of the CDCL core lists only Lean's standard `propext` and
 `Quot.sound`; parser diagnostics additionally depend on `Classical.choice`.
 
-Future proofs can use these definitions directly. Required invariants include
-literal and arena bounds, linked-watch coverage, the root/processed/trail prefix
-relation, reason dependencies earlier in the trail, and decision-list coverage.
-The principal semantic obligations are that learned clauses follow from the
-input, propagation and backjumping preserve the search meaning, database
-reduction retains sufficient reasons, and completed models/UNSAT conclusions
-are correct. Search termination is a separate outstanding obligation.
+The independent `MicrosatLean/Verification/` subtree uses the pinned toolchain's
+`Std.Sat.CNF` API. Its checked results currently cover:
+
+| Area | Proved scope |
+| --- | --- |
+| `Specification` | Evaluation agreement and satisfiability/UNSAT equivalence between executable formulas and standard CNFs |
+| `Logic` | Resolution soundness, ordered clause minimization, model-preserving learning rules, and a canonical clause space of size `3^n` |
+| `Representation` | Bounds, actual clause allocation, assignment/trail/phase updates, root-preserving restart, move-to-front order preservation, and semantic reason rules |
+| `Propagation` | Actual replacement-scan correctness, unit-assignment semantics, and the SAT rule under assignment coverage and propagation closure |
+| `Analysis` | The actual minimizer changes only mark values; exact bounded/cache/decision cases |
+| `Search` | Actual decision-scan completeness and assumptions, equivalence to its previous loop, runner composition, arithmetic progress, and termination lifting from a decreasing reachable-state rank |
+
+Check the proof modules and audit all their declarations, including private
+helpers, with:
+
+```sh
+lake build MicrosatLean.Verification
+lake env lean tests/Verification.lean
+```
+
+The audit permits only Lean's standard `propext`, `Classical.choice`, and
+`Quot.sound` axioms. Conditional preservation and termination-lifting theorems
+still require their hypotheses to be proved for the actual search. In
+particular, linked-watch coverage and propagation closure, first-UIP and
+recursive minimization soundness, asserting-clause freshness, initialization
+and database-reduction invariants, and a decreasing global rank remain open.
+The partial IO driver has not yet been replaced by a verified total runner.
 
 The [DIMACS CNF test corpus](tests/cnf/README.md) contains 128 boundary,
 structured and SATLIB fixtures with expected SAT/UNSAT results. Validate it with:
