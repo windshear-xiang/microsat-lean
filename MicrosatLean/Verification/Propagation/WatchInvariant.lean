@@ -14,6 +14,13 @@ structure WatchCertificate (s : State) (entries : List StoredClause) (heads : Na
     ClauseWatches heads entry.id entry.lits[0]! entry.lits[1]!
   unique : ∀ lit other ref, ref ∈ heads lit → ref ∈ heads other → lit = other
 
+theorem WatchCertificate.frameArrays {before after : State} {entries : List StoredClause}
+    {heads : Nat → List Nat} (certificate : WatchCertificate before entries heads)
+    (arena : after.arena = before.arena) (first : after.first = before.first) :
+    WatchCertificate after entries heads :=
+  ⟨fun lit => (certificate.links lit).frame (by rw [first]) (by intro ref _; simp only [State.db, arena]),
+    certificate.references, certificate.covered, certificate.unique⟩
+
 theorem WatchCertificate.entry {s : State} {original learned : List StoredClause} {heads : Nat → List Nat}
     (database : Database s original learned) (certificate : WatchCertificate s (original ++ learned) heads)
     {lit : Lit} {ref : Nat} (member : ref ∈ heads lit) : WatchEntry s lit ref := by

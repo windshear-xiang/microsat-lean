@@ -83,6 +83,29 @@ theorem runningReachable_of_runFor_running {initial machine next : Machine}
     fuel hCurrent
   simpa [hRun, ValidProgress] using hValid
 
+/-- A well-founded rank may be a lexicographic tuple rather than a single
+natural number. The proof follows the actual transition, so it supplies a
+finite run length without assuming a successful execution budget. -/
+theorem exists_runFor_finished_of_wellFounded_rank {Rank : Type} {less : Rank → Rank → Prop}
+    (wellFounded : WellFounded less) (initial : Machine) (rank : Machine → Rank)
+    (decreases : ∀ before after, RunningReachable initial before →
+      step before = .running after → less (rank after) (rank before)) :
+    ∃ fuel result, runFor fuel initial = .finished result := by
+  have terminates : ∀ value, ∀ machine, rank machine = value →
+      RunningReachable initial machine → ∃ fuel result, runFor fuel machine = .finished result := by
+    intro value
+    induction value using wellFounded.induction with
+    | h value ih =>
+      intro machine equal reachable
+      cases transition : step machine with
+      | finished result => exact ⟨1, result, by simp only [runFor, transition]⟩
+      | running next =>
+        have smaller : less (rank next) value := equal ▸ decreases machine next reachable transition
+        obtain ⟨fuel, result, finished⟩ := ih (rank next) smaller next rfl
+          (RunningReachable.advance reachable transition)
+        exact ⟨fuel + 1, result, by simpa only [runFor, transition] using finished⟩
+  exact terminates (rank initial) initial rfl .initial
+
 /-- A genuinely decreasing natural-number rank on every reachable running
 transition implies that the actual runner eventually returns a result. The
 proof uses well-founded induction on the rank, with no assumed success fuel. -/
