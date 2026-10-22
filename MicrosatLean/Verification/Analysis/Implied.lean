@@ -100,10 +100,12 @@ private theorem range_forIn_invariant {β : Type} (range : Std.Legacy.Range)
   rw [Std.Legacy.Range.forIn_eq_forIn_range']
   exact list_forIn_invariant _ body p step initial h
 
-private abbrev ScanState := Option (State × Bool) × State
+abbrev ImpliedScanState := Option (State × Bool) × State
 
-private def scanBody (recurse : State → Lit → State × Bool) (lit : Lit)
-    (i : Nat) (acc : ScanState) : Id (ForInStep ScanState) :=
+/-- The anonymous loop body in the executable minimizer, exposed only in the
+proof subtree so structural and semantic invariants can share the same body. -/
+def impliedScanBody (recurse : State → Lit → State × Bool) (lit : Lit)
+    (i : Nat) (acc : ImpliedScanState) : Id (ForInStep ImpliedScanState) :=
   let s := acc.2
   let antecedent := s.db i
   if antecedent == 0 then .done (none, s)
@@ -114,15 +116,15 @@ private def scanBody (recurse : State → Lit → State × Bool) (lit : Lit)
     else .yield (none, next)
   else .yield (none, s)
 
-private def ScanFrame (before : State) (acc : ScanState) : Prop :=
+private def ScanFrame (before : State) (acc : ImpliedScanState) : Prop :=
   MarkFrame before acc.2 ∧
     ∀ result, acc.1 = some result → MarkFrame before result.1 ∧ result.2 = false
 
 private theorem scanBody_frame (recurse : State → Lit → State × Bool)
     (hrec : ∀ s lit, MarkFrame s (recurse s lit).1)
-    (before : State) (lit i : Nat) (acc : ScanState) (h : ScanFrame before acc) :
-    ScanFrame before (scanBody recurse lit i acc).value := by
-  simp only [scanBody]
+    (before : State) (lit i : Nat) (acc : ImpliedScanState) (h : ScanFrame before acc) :
+    ScanFrame before (impliedScanBody recurse lit i acc).value := by
+  simp only [impliedScanBody]
   split
   · exact ⟨h.1, by intro result hr; cases hr⟩
   · split
@@ -177,9 +179,9 @@ theorem implied_markFrame (fuel : Nat) (s : State) (lit : Lit) :
       · simp only [bind, pure]
         unfold Break.runK.match_1
         let range : Std.Legacy.Range := [s.reason lit + 1 : s.arena.size]
-        let result : ScanState := forIn (m := Id) range (none, s) (scanBody (implied fuel) lit)
+        let result : ImpliedScanState := forIn (m := Id) range (none, s) (impliedScanBody (implied fuel) lit)
         have hr : ScanFrame s result :=
-          range_forIn_invariant range (scanBody (implied fuel) lit) (ScanFrame s)
+          range_forIn_invariant range (impliedScanBody (implied fuel) lit) (ScanFrame s)
             (scanBody_frame _ ih s lit) (none, s) ⟨MarkFrame.refl s, by
               intro result hr
               cases hr⟩
@@ -189,5 +191,75 @@ theorem implied_markFrame (fuel : Nat) (s : State) (lit : Lit) :
         cases heq : result.1 with
         | none => exact hr.1.trans (markFrame_setMark result.2 lit 6)
         | some r => exact (hr.2 r heq).1
+
+private def ScanMarked (keptLit : Lit) (acc : ImpliedScanState) : Prop :=
+  acc.2.mark keptLit = 2 ∧
+    ∀ result, acc.1 = some result → result.1.mark keptLit = 2
+
+private theorem scanBody_marked (recurse : State → Lit → State × Bool)
+    (hrec : ∀ s target keptLit, keptLit ≠ target → s.mark keptLit = 2 →
+      (recurse s target).1.mark keptLit = 2)
+    (target keptLit i : Nat) (different : keptLit ≠ target)
+    (acc : ImpliedScanState) (h : ScanMarked keptLit acc) :
+    ScanMarked keptLit (impliedScanBody recurse target i acc).value := by
+  simp only [impliedScanBody]
+  split
+  · exact ⟨h.1, by intro result impossible; cases impossible⟩
+  · split
+    · have notMarked : acc.2.mark (acc.2.db i) ≠ 2 := by
+        simpa using ‹(acc.2.mark (acc.2.db i) != 2) = true›
+      have notProtected : keptLit ≠ acc.2.db i := by
+        intro equal
+        exact notMarked (equal ▸ h.1)
+      have preserved := hrec acc.2 (acc.2.db i) keptLit notProtected h.1
+      cases hr : recurse acc.2 (acc.2.db i) with
+      | mk next follows =>
+        have nextMarked : next.mark keptLit = 2 := by simpa only [hr] using preserved
+        split
+        · refine ⟨nextMarked, ?_⟩
+          intro result returned
+          cases returned
+          simpa only [Representation.setMark_mark_other (Ne.symm different)] using nextMarked
+        · exact ⟨nextMarked, by intro result impossible; cases impossible⟩
+    · exact ⟨h.1, by intro result impossible; cases impossible⟩
+
+/-- Recursive minimization never overwrites another original MARK leaf:
+the recursive branch explicitly skips any antecedent whose tag is 2. This
+holds for every state, including exhausted fuel and malformed reason data. -/
+theorem implied_preserves_mark_two (fuel : Nat) (s : State) (target keptLit : Lit)
+    (different : keptLit ≠ target) (marked : s.mark keptLit = 2) :
+    (implied fuel s target).1.mark keptLit = 2 := by
+  induction fuel generalizing s target keptLit with
+  | zero => exact marked
+  | succ fuel ih =>
+    rw [implied.eq_2]
+    dsimp only [Id.run]
+    split
+    · exact marked
+    · split
+      · exact marked
+      · simp only [bind, pure]
+        unfold Break.runK.match_1
+        let range : Std.Legacy.Range := [s.reason target + 1 : s.arena.size]
+        let result : ImpliedScanState :=
+          forIn (m := Id) range (none, s) (impliedScanBody (implied fuel) target)
+        have hr : ScanMarked keptLit result :=
+          range_forIn_invariant range (impliedScanBody (implied fuel) target)
+            (ScanMarked keptLit) (scanBody_marked _ ih target keptLit · different)
+            (none, s) ⟨marked, by intro result impossible; cases impossible⟩
+        change (Option.casesOn (motive := fun _ => State × Bool) result.1
+          (result.2.setMark target 6, true) (fun r => r)).1.mark keptLit = 2
+        cases returned : result.1 with
+        | none =>
+          simpa only [Representation.setMark_mark_other (Ne.symm different)] using hr.1
+        | some answer => exact hr.2 answer returned
+
+/-- Calls made on an unmarked antecedent preserve all existing MARK leaves. -/
+theorem implied_preserves_marks_of_target_not_two (fuel : Nat) (s : State) (target : Lit)
+    (notMarked : s.mark target ≠ 2) (keptLit : Lit) (marked : s.mark keptLit = 2) :
+    (implied fuel s target).1.mark keptLit = 2 := by
+  apply implied_preserves_mark_two fuel s target keptLit _ marked
+  intro equal
+  exact notMarked (equal ▸ marked)
 
 end MicrosatLean.Verification.Analysis
