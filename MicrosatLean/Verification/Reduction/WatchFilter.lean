@@ -13,7 +13,7 @@ private def PreviousReference (source remaining : List Nat) : Option Nat → Pro
   | none => True
   | some pos => ∃ ref ∈ source, ref ∉ remaining ∧ pos = watchLinkPos ref
 
-private theorem database_setWatchLink {s : State} {original learned : List StoredClause}
+theorem database_setWatchLink {s : State} {original learned : List StoredClause}
     (database : Database s original learned) {ref : Nat}
     (proper : StoredWatchRef (original ++ learned) ref) (value : Nat) :
     Database { s with arena := s.arena.set! (watchLinkPos ref) value } original learned := by
@@ -24,7 +24,7 @@ private theorem database_setWatchLink {s : State} {original learned : List Store
   rw [position]
   exact database.setHeader member (ref % 2) value (by omega)
 
-private theorem watchLink_ne {s : State} {original learned : List StoredClause}
+theorem watchLink_ne {s : State} {original learned : List StoredClause}
     (database : Database s original learned) {left right : Nat}
     (leftProper : StoredWatchRef (original ++ learned) left)
     (rightProper : StoredWatchRef (original ++ learned) right) (different : left ≠ right) :

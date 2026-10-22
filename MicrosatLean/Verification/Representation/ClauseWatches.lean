@@ -185,6 +185,42 @@ def clauseWatchHeads (heads : Nat → List Nat) (clauseId first second lit : Nat
   else if lit = second then (2 * clauseId + 1) :: heads lit
   else heads lit
 
+theorem clauseWatchHeads_source_head {heads : Nat → List Nat} {id first second lit ref : Nat}
+    (member : ref ∈ clauseWatchHeads heads id first second lit) :
+    ref ∈ heads lit ∨ (ref = 2 * id ∧ lit = first) ∨ (ref = 2 * id + 1 ∧ lit = second) := by
+  unfold clauseWatchHeads at member
+  split at member
+  · rcases List.mem_cons.mp member with same | old
+    · exact Or.inr (Or.inl ⟨same, by assumption⟩)
+    · exact Or.inl old
+  · split at member
+    · rcases List.mem_cons.mp member with same | old
+      · exact Or.inr (Or.inr ⟨same, by assumption⟩)
+      · exact Or.inl old
+    · exact Or.inl member
+
+theorem clauseWatchHeads_unique {s : State} {heads : Nat → List Nat}
+    (lists : ∀ lit, WatchList s lit (heads lit))
+    (unique : ∀ lit other ref, ref ∈ heads lit → ref ∈ heads other → lit = other)
+    (first second : Lit) :
+    ∀ lit other ref,
+      ref ∈ clauseWatchHeads heads (s.arena.size + 2) first second lit →
+      ref ∈ clauseWatchHeads heads (s.arena.size + 2) first second other → lit = other := by
+  intro lit other ref left right
+  rcases clauseWatchHeads_source_head left with oldLeft | firstLeft | secondLeft
+  · rcases clauseWatchHeads_source_head right with oldRight | firstRight | secondRight
+    · exact unique lit other ref oldLeft oldRight
+    · exact False.elim ((lists lit).newRef_not_mem 0 (by decide) (firstRight.1 ▸ oldLeft))
+    · exact False.elim ((lists lit).newRef_not_mem 1 (by decide) (secondRight.1 ▸ oldLeft))
+  · rcases clauseWatchHeads_source_head right with oldRight | firstRight | secondRight
+    · exact False.elim ((lists other).newRef_not_mem 0 (by decide) (firstLeft.1 ▸ oldRight))
+    · exact firstLeft.2.trans firstRight.2.symm
+    · omega
+  · rcases clauseWatchHeads_source_head right with oldRight | firstRight | secondRight
+    · exact False.elim ((lists other).newRef_not_mem 1 (by decide) (secondLeft.1 ▸ oldRight))
+    · omega
+    · exact secondLeft.2.trans secondRight.2.symm
+
 theorem clauseWatchHeads_mem {heads : Nat → List Nat} {clauseId first second lit ref : Nat}
     (member : ref ∈ heads lit) : ref ∈ clauseWatchHeads heads clauseId first second lit := by
   unfold clauseWatchHeads
