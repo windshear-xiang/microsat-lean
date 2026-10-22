@@ -1,0 +1,4 @@
+c No trailing newline is required.
+p cnf 1 2
+1 0
+-1 0

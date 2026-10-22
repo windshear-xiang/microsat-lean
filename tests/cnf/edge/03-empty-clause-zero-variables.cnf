@@ -1,0 +1,3 @@
+c One empty clause with zero variables.
+p cnf 0 1
+0

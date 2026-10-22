@@ -1,0 +1,4 @@
+c Sparse numbering reaches declared variable 1024.
+p cnf 1024 2
+1024 0
+-1 1024 0

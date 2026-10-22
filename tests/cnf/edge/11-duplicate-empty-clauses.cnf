@@ -1,0 +1,4 @@
+c Repeated empty clauses with zero variables.
+p cnf 0 2
+0
+0
