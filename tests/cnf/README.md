@@ -84,7 +84,7 @@ Each selected instance runs in a separate solver process with a per-instance
 time limit. SAT models are also checked against every original clause. A wrong
 answer, solver failure or timeout gives a nonzero exit status. The default
 per-instance limit is five seconds. The format check always covers all fixtures,
-even with `--tier`. Add `--timings .agent-memory/cnf-timings.json` to save a timing
+even with `--tier`. Add `--timings tmp/cnf-timings.json` to save a timing
 report; times include Python worker startup and model checking. On Windows,
 backend failures are reported through the child exit code without crash dialogs.
 
@@ -117,7 +117,7 @@ The 48 downloaded cases come from the
 
 The source archives and exact member selection are pinned in
 [`../../tools/fetch_satlib_cnf.py`](../../tools/fetch_satlib_cnf.py). Downloads
-are cached only in the ignored `.agent-memory/satlib-cache/` directory. The tool
+are cached only in the ignored `tmp/satlib-cache/` directory. The tool
 reads named regular archive members directly without extracting paths.
 
 ```sh

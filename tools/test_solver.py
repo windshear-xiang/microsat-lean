@@ -12,6 +12,7 @@ from pathlib import Path
 import random
 import subprocess
 import sys
+import tempfile
 import time
 
 sys.dont_write_bytecode = True
@@ -102,7 +103,7 @@ def main() -> int:
     parser.add_argument("--timeout", type=float, default=3)
     parser.add_argument("--fuzz", type=int, default=512,
                         help="deterministic small formulas checked by exhaustive truth tables")
-    parser.add_argument("--report", type=Path, default=ROOT / ".agent-memory" / "lean-tests.json")
+    parser.add_argument("--report", type=Path, default=ROOT / "tmp" / "lean-tests.json")
     args = parser.parse_args()
     if args.timeout <= 0 or args.fuzz < 0:
         parser.error("timeout must be positive and fuzz count nonnegative")
@@ -111,8 +112,10 @@ def main() -> int:
         parser.error(f"solver not found: {executable}; run lake build first")
     executable_sha256 = hashlib.sha256(executable.read_bytes()).hexdigest()
     entries = load_corpus()
-    scratch = ROOT / ".agent-memory" / "test-solver"
-    scratch.mkdir(parents=True, exist_ok=True)
+    temporary_root = ROOT / "tmp"
+    temporary_root.mkdir(parents=True, exist_ok=True)
+    scratch_context = tempfile.TemporaryDirectory(prefix="test-solver-", dir=temporary_root)
+    scratch = Path(scratch_context.name)
     records = []
 
     def check(name: str, path: Path, expected: str, variables: int,
@@ -187,6 +190,7 @@ def main() -> int:
     args.report.write_text(json.dumps({"executable": str(executable), "executable_sha256": executable_sha256,
                                        "executable_sha256_after": executable_sha256_after, "timeout_seconds": args.timeout,
                                        "results": records}, indent=2) + "\n", encoding="utf-8")
+    scratch_context.cleanup()
     return 0 if counts["passed"] == len(records) else 1
 
 

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Reproduce the 48 selected SATLIB fixtures with Python's standard library.
 
-Downloads are cached in .agent-memory/satlib-cache. Archive SHA-256 pins ensure
+Downloads are cached in tmp/satlib-cache. Archive SHA-256 pins ensure
 that a source update cannot silently replace the corpus. Only explicitly named
 regular archive members are read; archive paths are never extracted.
 
 Examples:
     python tools/fetch_satlib_cnf.py
     python tools/fetch_satlib_cnf.py --check --offline
-    python tools/fetch_satlib_cnf.py --metadata .agent-memory/satlib.json
+    python tools/fetch_satlib_cnf.py --metadata tmp/satlib.json
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ import urllib.request
 ROOT = Path(__file__).resolve().parents[1]
 BASE = "https://www.cs.ubc.ca/~hoos/SATLIB/Benchmarks/SAT/"
 OVERVIEW = "https://www.cs.ubc.ca/~hoos/SATLIB/benchm.html"
-DEFAULT_CACHE = ROOT / ".agent-memory" / "satlib-cache"
+DEFAULT_CACHE = ROOT / "tmp" / "satlib-cache"
 DEFAULT_OUTPUT = ROOT / "tests" / "cnf" / "satlib"
 
 # Values pin the actual compressed download, including the archive's metadata.

@@ -70,7 +70,8 @@ The Python runner executes all 128 CNF fixtures, checks statuses and complete
 SAT models independently, rejects malformed inputs, and compares 512
 deterministically generated small formulas with a brute-force oracle. It needs
 only Python's standard library. Native processes have per-instance time limits;
-reports and temporary inputs stay in the ignored `.agent-memory/` directory.
+reports stay in the ignored `tmp/` directory; temporary inputs are removed after
+the run. `.agent-memory/` contains only concise, durable agent notes.
 
 The complete native suite passed 657/657 checks: all 128 fixtures, all 512
 brute-force cases and all 17 malformed inputs. The slowest corpus case took
