@@ -1,0 +1,10 @@
+name = "microsat-lean"
+version = "0.1.0"
+defaultTargets = ["microsat-lean"]
+
+[[lean_lib]]
+name = "MicrosatLean"
+
+[[lean_exe]]
+name = "microsat-lean"
+root = "Main"
