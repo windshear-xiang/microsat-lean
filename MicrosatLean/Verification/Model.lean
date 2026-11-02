@@ -53,8 +53,7 @@ def Conflict (a : LogicalState) (clause : Clause) : Prop :=
 def prefixLiterals (a : LogicalState) (count : Nat) : List Literal :=
   (a.trail.take count).map TrailEntry.literal
 
-abbrev StoredClause := Implementation.Native.Representation.StoredClause
-
+abbrev StoredClause := Implementation.Representation.StoredClause
 
 structure RepresentationWitness where
   original : List StoredClause
@@ -65,17 +64,17 @@ structure RepresentationWitness where
 def RepresentationWitness.entries (w : RepresentationWitness) : List StoredClause :=
   w.original ++ w.learned
 
-abbrev ArrayBounds := Implementation.Native.Representation.ArrayBounds
+abbrev ArrayBounds := Implementation.Representation.ArrayBounds
 
 abbrev PackedClause (s : CDCL.State) (entry : StoredClause) :=
-  Implementation.Native.Representation.PackedClause s entry.id entry.lits
+  Implementation.Representation.PackedClause s entry.id entry.lits
 
-abbrev DatabaseFrom := Implementation.Native.Representation.DatabaseFrom
+abbrev DatabaseFrom := Implementation.Representation.DatabaseFrom
 
 abbrev WatchRepresentation (s : CDCL.State) (w : RepresentationWitness) :=
-  Implementation.Native.Propagation.WatchCertificate s w.entries w.heads
+  Implementation.Propagation.WatchCertificate s w.entries w.heads
 
-abbrev OrderRepresentation := Implementation.Native.Representation.MTFOrder
+abbrev OrderRepresentation := Implementation.Representation.MTFOrder
 
 /-- Numeric storage and the logical state share this single witness. Array
 contents outside the active trail may be stale; they are not assignments. -/
@@ -86,8 +85,8 @@ structure Rep (m : CDCL.Machine) (a : LogicalState) (w : RepresentationWitness) 
   layout : DatabaseFrom m.solver 2 w.entries
   fixed : m.solver.fixed = 2 + (w.original.map fun e => e.lits.size + 3).sum
   count : m.solver.nLemmas = w.learned.length
-  original : a.original = w.original.map Implementation.Native.Representation.StoredClause.view
-  learned : a.learned = w.learned.map Implementation.Native.Representation.StoredClause.view
+  original : a.original = w.original.map Implementation.Representation.StoredClause.view
+  learned : a.learned = w.learned.map Implementation.Representation.StoredClause.view
   trailLength : a.trail.length = m.solver.assigned
   rootSize : a.rootSize = m.solver.forced
   cursors : m.solver.forced ≤ m.solver.processed ∧

@@ -4,8 +4,9 @@ import MicrosatLean.Verification.Progress.Rank
 namespace MicrosatLean.Verification
 
 /-!
-Termination rank for the existing restart/reduction policy. The arithmetic is
-separate from the obligation that every actual running step decreases it.
+The shared rank is defined in Progress/Rank so both proof layers use it without
+depending on each other's invariants. This module states the concrete
+step-decrease obligation and the finite ternary clause-space interpretation.
 `3^n` counts ternary polarity choices, not assignments. Freshness concerns the
 retained learned clauses; deleting and relearning is handled by limit growth.
 -/

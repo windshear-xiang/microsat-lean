@@ -3,7 +3,7 @@ import MicrosatLean.Verification.Specification
 /-! Canonical storage predicates shared by the logical model and concrete
 implementation proofs. No operation preservation or solver result is assumed. -/
 
-namespace MicrosatLean.Verification.Implementation.Native.Representation
+namespace MicrosatLean.Verification.Implementation.Representation
 
 open CDCL
 
@@ -109,10 +109,9 @@ def DatabaseFrom (s : State) (start : Nat) : List StoredClause → Prop
   | entry :: rest => entry.id = start + 2 ∧ PackedClause s entry.id entry.lits ∧
       DatabaseFrom s (entry.id + entry.lits.size + 1) rest
 
+end MicrosatLean.Verification.Implementation.Representation
 
-end MicrosatLean.Verification.Implementation.Native.Representation
-
-namespace MicrosatLean.Verification.Implementation.Native.Propagation
+namespace MicrosatLean.Verification.Implementation.Propagation
 
 open CDCL Representation
 
@@ -121,13 +120,11 @@ than to an arbitrary zero-terminated suffix in the arena. -/
 def StoredWatchRef (entries : List StoredClause) (ref : Nat) : Prop :=
   ∃ entry ∈ entries, watchClause ref = entry.id ∧ 2 ≤ entry.lits.size
 
-
 /-- The pointer component of WatchList, separated from clause membership
 while literal cells are temporarily being reoriented by propagation. -/
 def WatchLinks (s : State) (lit : Lit) (refs : List Nat) : Prop :=
   refs.Nodup ∧ s.first[lit]! = refs.headD 0 ∧
     ∀ i, i < refs.length → s.db (watchLinkPos (refs.getD i 0)) = refs.getD (i + 1) 0
-
 
 /-- A simultaneous ghost description of finite watch chains, genuine refs,
 both slots of every long stored clause, and unique ownership by literal head.
@@ -139,5 +136,4 @@ structure WatchCertificate (s : State) (entries : List StoredClause) (heads : Na
     ClauseWatches heads entry.id entry.lits[0]! entry.lits[1]!
   unique : ∀ lit other ref, ref ∈ heads lit → ref ∈ heads other → lit = other
 
-
-end MicrosatLean.Verification.Implementation.Native.Propagation
+end MicrosatLean.Verification.Implementation.Propagation

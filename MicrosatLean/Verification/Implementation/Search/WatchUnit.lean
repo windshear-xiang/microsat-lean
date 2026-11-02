@@ -4,25 +4,24 @@ import MicrosatLean.Verification.Implementation.Bridge.Assignment
 namespace MicrosatLean.Verification.Implementation.Search
 
 open CDCL Bridge
-open Native.Representation Native.Propagation
-private abbrev NEntry := Native.Representation.StoredClause
+open Representation Propagation
 
 /-- A failed replacement scan supplies the false tails of the actual reason;
 the two mark tests supply a fresh head. Orientation and assignment are then
 two separate logical moves. -/
 theorem watch_unit_trace {input : CNF} {s : State}
-    {original learned : List NEntry} {heads : Lit → List Nat} {rank : Lit → Nat}
-    (base : Native.Search.StateCertificate input s original learned heads rank)
+    {original learned : List StoredClause} {heads : Lit → List Nat} {rank : Lit → Nat}
+    (base : Search.Concrete.StateCertificate input s original learned heads rank)
     {lit : Lit} {ref : Nat} (current : ref ∈ heads lit) (falseLit : s.mark lit ≠ 0)
     (missing : replacement (orientWatch s.arena (watchClause ref) lit) s.marks (watchClause ref) = none)
     (head : s.mark ((retainWatch s.arena (watchClause ref) lit)[watchClause ref]!) = 0)
     (opposite : s.mark (Lit.negate ((retainWatch s.arena (watchClause ref) lit)[watchClause ref]!)) = 0)
-    (root : Bool) {nextOriginal nextLearned : List NEntry}
+    (root : Bool) {nextOriginal nextLearned : List StoredClause}
     (database : Database
       ({ s with arena := retainWatch s.arena (watchClause ref) lit }.assign (watchClause ref) root)
       nextOriginal nextLearned) :
-    LogicalExecution input (nativeState s original learned)
-      (nativeState ({ s with arena := retainWatch s.arena (watchClause ref) lit }.assign (watchClause ref) root)
+    LogicalExecution input (logicalView s original learned)
+      (logicalView ({ s with arena := retainWatch s.arena (watchClause ref) lit }.assign (watchClause ref) root)
         nextOriginal nextLearned) := by
   obtain ⟨entry, member, id, wide⟩ := base.watches.references lit ref current
   have watched : s.db entry.id = lit ∨ s.db (entry.id + 1) = lit := by
@@ -54,7 +53,7 @@ theorem watch_unit_trace {input : CNF} {s : State}
     rw [second]
     exact falseLit
   have tails : ∀ j, 0 < j → j < (f entry).lits.size →
-      Native.Analysis.TrailMember retained retained.assigned (f entry).lits[j]! := by
+      Analysis.TrailMember retained retained.assigned (f entry).lits[j]! := by
     intro j positive before
     apply retainedBase.marked
     by_cases one : j = 1
@@ -65,7 +64,7 @@ theorem watch_unit_trace {input : CNF} {s : State}
   have oppositeZero : retained.mark (Lit.negate (retained.db (f entry).id)) = 0 := by
     simpa only [packedId, retained, State.mark, State.db] using opposite
   have orient := retained_trace base current falseLit retainedBase.database
-  have assign := native_unit_trace retainedBase mapped (by omega) headZero oppositeZero tails root
+  have assign := view_unit_trace retainedBase mapped (by omega) headZero oppositeZero tails root
   have combined := Logic.execution_trans orient assign
   simpa only [packedId, retained] using combined
 

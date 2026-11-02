@@ -20,7 +20,7 @@ private theorem next_layout_frame {before after : CDCL.State} {start : Nat} {ent
     (layout : DatabaseFrom before start entries) (variables : after.nVars = before.nVars)
     (arena : after.arena = before.arena) : DatabaseFrom after start entries := by
   induction entries generalizing start with
-  | nil => simpa only [DatabaseFrom, Native.Representation.DatabaseFrom, arena] using layout
+  | nil => simpa only [DatabaseFrom, Representation.DatabaseFrom, arena] using layout
   | cons entry rest ih =>
     exact ⟨layout.1, next_packed_frame layout.2.1 variables arena, ih layout.2.2⟩
 
@@ -29,7 +29,7 @@ private theorem next_watches_frame {before after : CDCL.State} {w : Representati
     (heads : after.first = before.first) : WatchRepresentation after w := by
   refine ⟨?_, watches.references, watches.covered, watches.unique⟩
   intro lit
-  simpa only [Native.Propagation.WatchLinks, arena, heads, CDCL.State.db] using watches.links lit
+  simpa only [Propagation.WatchLinks, arena, heads, CDCL.State.db] using watches.links lit
 
 /-- Processing changes only a cursor, not the logical assignment. -/
 theorem rep_set_processed {m : CDCL.Machine} {a : LogicalState} {w : RepresentationWitness}

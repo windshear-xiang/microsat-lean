@@ -1,6 +1,5 @@
-import MicrosatLean.Verification.Implementation.Bridge.ToNativeBase
-import MicrosatLean.Verification.Implementation.Native.Propagation.DatabaseIdentity
-import MicrosatLean.Verification.Implementation.Native.Propagation.WatchIdentity
+import MicrosatLean.Verification.Implementation.Bridge.Representation
+import MicrosatLean.Verification.Implementation.Propagation.WatchIdentity
 
 namespace MicrosatLean.Verification.Implementation.Bridge
 
@@ -21,12 +20,12 @@ theorem rep_frame_solver {before after : CDCL.Machine} (same : before.solver = a
 theorem rep_entries_unique {m : CDCL.Machine} {a b : LogicalState}
     {w v : RepresentationWitness} (left : Rep m a w) (right : Rep m b v) :
     w.original = v.original ∧ w.learned = v.learned := by
-  exact (database_toNative left).unique (database_toNative right)
+  exact (database_concrete left).unique (database_concrete right)
 
 private theorem packed_of_mem {m : CDCL.Machine} {a : LogicalState}
     {w : RepresentationWitness} (represented : Rep m a w)
     {entry : StoredClause} (member : entry ∈ w.entries) :
-    Native.Representation.PackedClause m.solver entry.id entry.lits := by
+    Representation.PackedClause m.solver entry.id entry.lits := by
   exact represented.layout.packed member
 
 theorem rep_reason_unique {m : CDCL.Machine} {a b : LogicalState}
@@ -58,11 +57,11 @@ theorem rep_reason_unique {m : CDCL.Machine} {a b : LogicalState}
       obtain ⟨entry, member, id, view⟩ := leftReason
       obtain ⟨next, contained, nextId, nextView⟩ := rightReason
       have sameId : entry.id = next.id := id.trans nextId.symm
-      have nextPacked : Native.Representation.PackedClause m.solver entry.id next.lits :=
+      have nextPacked : Representation.PackedClause m.solver entry.id next.lits :=
         sameId.symm ▸ packed_of_mem right contained
       have sameLiterals := (packed_of_mem left member).unique nextPacked
       have sameView : entry.view = next.view := by
-        simp only [Native.Representation.StoredClause.view, sameLiterals]
+        simp only [Representation.StoredClause.view, sameLiterals]
       exact congrArg some (view.symm.trans (sameView.trans nextView))
 
 theorem rep_trail_unique {m : CDCL.Machine} {a b : LogicalState}
@@ -87,8 +86,8 @@ theorem rep_unique {m : CDCL.Machine} {a b : LogicalState}
     {w v : RepresentationWitness} (left : Rep m a w) (right : Rep m b v) : a = b := by
   have entries := rep_entries_unique left right
   have variables := left.variables.trans right.variables.symm
-  have original := left.original.trans ((congrArg (List.map Native.Representation.StoredClause.view) entries.1).trans right.original.symm)
-  have learned := left.learned.trans ((congrArg (List.map Native.Representation.StoredClause.view) entries.2).trans right.learned.symm)
+  have original := left.original.trans ((congrArg (List.map Representation.StoredClause.view) entries.1).trans right.original.symm)
+  have learned := left.learned.trans ((congrArg (List.map Representation.StoredClause.view) entries.2).trans right.learned.symm)
   have trail := rep_trail_unique left right
   have roots := left.rootSize.trans right.rootSize.symm
   cases a
@@ -99,27 +98,6 @@ theorem rep_unique_of_solver_eq {before after : CDCL.Machine}
     {a b : LogicalState} {w v : RepresentationWitness}
     (same : before.solver = after.solver) (left : Rep before a w) (right : Rep after b v) : a = b :=
   rep_unique (rep_frame_solver same left) right
-
-private theorem watch_links {m : CDCL.Machine} {a : LogicalState} {w : RepresentationWitness}
-    (represented : Rep m a w) (lit : Lit) :
-    Native.Propagation.WatchLinks m.solver lit (w.heads lit) :=
-  represented.watches.links lit
-
-private theorem watch_nonzero {m : CDCL.Machine} {a : LogicalState} {w : RepresentationWitness}
-    (represented : Rep m a w) (lit : Lit) : ∀ ref ∈ w.heads lit, ref ≠ 0 := by
-  intro ref member zero
-  obtain ⟨entry, stored, id, _⟩ := represented.watches.references lit ref member
-  have lower := (Native.Representation.DatabaseFrom.packed represented.layout stored).startLower
-  rw [zero] at id
-  simp only [CDCL.watchClause, Nat.zero_div] at id
-  omega
-
-theorem rep_heads_unique {m : CDCL.Machine} {a b : LogicalState}
-    {w v : RepresentationWitness} (left : Rep m a w) (right : Rep m b v) : w.heads = v.heads := by
-  funext lit
-  exact (watch_links left lit).chain.unique (watch_links right lit).chain
-    (watch_nonzero left lit) (watch_nonzero right lit)
-    ((left.watches.links lit).2.1.symm.trans (right.watches.links lit).2.1)
 
 private def PointerChain (next : Nat → Nat) : List Nat → Prop
   | [] => True
@@ -169,14 +147,5 @@ theorem rep_order_unique {m : CDCL.Machine} {a b : LogicalState}
     have positive := ((right.order.2.1 ref).mp member).1
     omega
   · exact left.order.2.2.1.symm.trans right.order.2.2.1
-
-theorem rep_witness_unique {m : CDCL.Machine} {a b : LogicalState}
-    {w v : RepresentationWitness} (left : Rep m a w) (right : Rep m b v) : w = v := by
-  have entries := rep_entries_unique left right
-  have heads := rep_heads_unique left right
-  have order := rep_order_unique left right
-  cases w
-  cases v
-  simp_all
 
 end MicrosatLean.Verification.Implementation.Bridge

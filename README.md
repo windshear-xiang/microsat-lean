@@ -83,7 +83,7 @@ the run. `.agent-memory/` contains only concise, durable agent notes.
 
 The complete native suite passed 657/657 checks: all 128 fixtures, all 512
 brute-force cases and all 17 malformed inputs. The slowest corpus case took
-1.872 seconds under a ten-second limit on the development machine. The Lean
+1.713 seconds under a ten-second limit on the development machine. The Lean
 regressions also pass. Differential checks against a C reference matched all
 96 structured/SATLIB statuses and conflict counts after applying the same input
 normalization; the reference changed only the original four-GiB arena reserve
@@ -107,7 +107,7 @@ Read the public framework in this order:
 | [`Model`](MicrosatLean/Verification/Model.lean) | True-literal logical trail and its relation to the real packed arena, false-literal trail, reasons, watches and variable order |
 | [`Invariant`](MicrosatLean/Verification/Invariant.lean) | Present-state semantic, control/history and canonical-progress predicates |
 | [`Transitions`](MicrosatLean/Verification/Transitions.lean) | Admissible logical moves and terminal gates; a real step may implement several moves or logical stuttering |
-| [`Progress`](MicrosatLean/Verification/Progress.lean) | The `3^n` clause space and concrete lexicographic variant accounting for learning, reduction, restart and propagation |
+| [`Progress`](MicrosatLean/Verification/Progress.lean) | The `3^n` clause space and step-decrease contract; `Progress/Rank.lean` supplies the shared concrete lexicographic rank |
 | [`Contracts`](MicrosatLean/Verification/Contracts.lean) | Exact logical, initialization, four-phase and rank obligations for the actual solver |
 | [`Correctness`](MicrosatLean/Verification/Correctness.lean) | Proved composition for finite `runFor`, a rank-based total runner and initialized solver results, instantiated with the closed implementation proofs |
 
@@ -117,10 +117,28 @@ that interface:
 
 | Directory | Responsibility |
 | --- | --- |
-| `Implementation/Logic/` | Logical transition preservation, terminal soundness and trace composition |
-| `Implementation/Bridge/` | Equivalence of readable/concrete certificates and exact logical views of assignment, analysis, initialization and rank |
-| `Implementation/Search/` | Actual four-phase refinement, including watch traversal, learning/assertion, restart/reduction and SAT/UNSAT gates |
-| `Implementation/Native/` | Checked packed-state proofs reused from `9aea98c`, with an isolated namespace and the original subfolder structure |
+| `Implementation/Encoding.lean` | Auxiliary literal/clause lemmas using the single public CNF specification |
+| `Implementation/Representation/` | Shared storage types, packed arena layout, trail, reasons and variable ordering |
+| `Implementation/Initialization/` | Actual normalization, allocation, initial units and watches |
+| `Implementation/Logic/` | Logical transition preservation, terminal soundness, resolution and finite clause space |
+| `Implementation/Propagation/` | Watch links, replacement scans, propagation closure and retained reasons |
+| `Implementation/Analysis/` | Reason graphs, conflict resolution, minimization, backjumping, assertion and learned-clause freshness |
+| `Implementation/Reduction/` | Clause retention, arena compaction, reason relocation and watch rebuilding |
+| `Implementation/Search/` | Four-phase logical refinement; `Concrete/` contains concrete search certificates, preservation and rank proofs |
+| `Implementation/Bridge/` | Logical views and refinement between abstract semantic facts and concrete algorithm certificates |
+
+The operation proofs originated in `Tim-dev-verification` at `9aea98c` and are
+integrated by responsibility; there is no parallel legacy proof tree. CNF views,
+input bounds, model semantics and the result predicate have one definition in
+`Specification`. `Model` uses the canonical storage predicates from
+`Implementation/Representation/Types.lean`, and both proof layers use the same
+rank from `Progress/Rank.lean`. There are no clause-entry conversion functions
+or identity maps between duplicate storage types. Abstract logical trails and
+concrete reason graphs remain distinct because they express different facts.
+
+Unused historical theorem variants and the old execution/termination composition
+were removed. Small public-only modules with one consumer are grouped with that
+consumer, while the eight obligation entry points remain separate and reviewable.
 
 The watch and choice proofs produce actual `LogicalExecution` witnesses;
 semantic validity is derived by the generic composition. They also preserve

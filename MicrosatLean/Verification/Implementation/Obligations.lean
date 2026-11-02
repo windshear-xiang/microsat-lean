@@ -1,10 +1,9 @@
-import MicrosatLean.Verification.Contracts
 import MicrosatLean.Verification.Implementation.Logic.Terminal
 import MicrosatLean.Verification.Implementation.Logic.Moves
 import MicrosatLean.Verification.Implementation.Search.Begin
 import MicrosatLean.Verification.Implementation.Search.Next
-import MicrosatLean.Verification.Implementation.Bridge.ToNativeInitialization
-import MicrosatLean.Verification.Implementation.Bridge.ToNativeProgress
+import MicrosatLean.Verification.Implementation.Bridge.Initialization
+import MicrosatLean.Verification.Implementation.Bridge.Progress
 import MicrosatLean.Verification.Implementation.Search.Watch
 import MicrosatLean.Verification.Implementation.Search.Choose
 
@@ -14,7 +13,8 @@ namespace MicrosatLean.Verification.Implementation
 The implementation obligations are discharged by the modules imported above.
 This small assembly is the only implementation package used by Correctness.
 Logical rules, real phase refinement and concrete rank decrease remain separate
-proofs. Their source-specific details live below Search, Bridge and Native.
+proofs. Operation-specific details live below Search, Bridge and the
+concrete operation directories.
 -/
 
 /-- Pure logical obligation: ordered reasons survive append/truncation,
