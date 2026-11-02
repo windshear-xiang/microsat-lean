@@ -48,6 +48,9 @@ structure Machine where
   previousWatch : Nat := 0
   deriving Repr, Inhabited
 
+/-- 从初始化后的 solver state 建立初始 machine：decision cursor 指向 MTF head，其余控制字段用默认值。 -/
+def Machine.initial (s : State) : Machine := { solver := s, decision := s.head }
+
 /-- 有限执行的返回状态：继续运行的 Machine，或已经完成的 SolveResult。 -/
 inductive Progress where
   /-- 预算尚未得到最终结果，保存可恢复的 machine。 -/

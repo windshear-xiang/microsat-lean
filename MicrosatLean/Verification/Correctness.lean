@@ -69,9 +69,9 @@ theorem run_correct {formula : Formula} {machine : CDCL.Machine}
 theorem initialized_search_correct_with (facts : ImplementationFacts) {formula : Formula}
     (valid : WellFormed formula) {config : CDCL.Config} {s : CDCL.State}
     (initialized : CDCL.initState formula config = .ok (some s)) :
-    ∃ fuel result, CDCL.runFor fuel (InitialMachine s) = .finished result ∧ ValidResult formula result := by
+    ∃ fuel result, CDCL.runFor fuel (CDCL.Machine.initial s) = .finished result ∧ ValidResult formula result := by
   have initial := initial_invariant valid initialized
-  obtain ⟨fuel, finished⟩ := run_finishes formula (InitialMachine s) initial
+  obtain ⟨fuel, finished⟩ := run_finishes formula (CDCL.Machine.initial s) initial
   have safe := runFor_correct_with facts fuel initial
   exact ⟨fuel, _, finished, by simpa only [finished, InvariantProgress] using safe⟩
 
@@ -123,7 +123,7 @@ theorem solveScaffold_correct (formula : Formula) (valid : WellFormed formula)
 theorem initialized_search_terminates {formula : Formula} (valid : WellFormed formula)
     {config : CDCL.Config} {s : CDCL.State}
     (initialized : CDCL.initState formula config = .ok (some s)) :
-    ∃ fuel result, CDCL.runFor fuel (InitialMachine s) = .finished result ∧ ValidResult formula result :=
+    ∃ fuel result, CDCL.runFor fuel (CDCL.Machine.initial s) = .finished result ∧ ValidResult formula result :=
   initialized_search_correct_with Implementation.actualFacts valid initialized
 
 end MicrosatLean.Verification

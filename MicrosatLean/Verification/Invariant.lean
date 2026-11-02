@@ -208,7 +208,4 @@ structure Certificate (formula : Formula) (m : CDCL.Machine)
 def Inv (formula : Formula) (m : CDCL.Machine) : Prop :=
   ∃ a w, Certificate formula m a w
 
-/-- 从初始化后的 solver state 建立初始 machine：decision cursor 指向 MTF head，其余控制字段用默认值。 -/
-def InitialMachine (s : CDCL.State) : CDCL.Machine := { solver := s, decision := s.head }
-
 end MicrosatLean.Verification

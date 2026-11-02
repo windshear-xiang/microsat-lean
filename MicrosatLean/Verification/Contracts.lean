@@ -10,14 +10,14 @@ Implementation/Obligations 汇总具体证明，最终 correctness composition �
 namespace MicrosatLean.Verification
 
 /-- 任意合法输入和 Config 都能成功初始化：提前返回 none 时输入确实 UNSAT；
-返回某个 state 时，与该 state 精确对应的 InitialMachine 满足 Inv。
+返回某个 state 时，与该 state 精确对应的 CDCL.Machine.initial 满足 Inv。
 -/
 def InitializationCorrect : Prop := ∀ formula,
   WellFormed formula → ∀ config : CDCL.Config,
     ∃ initialized, CDCL.initState formula config = .ok initialized ∧
       match initialized with
       | none => Std.Sat.CNF.Unsat (formulaView formula)
-      | some s => Inv formula (InitialMachine s)
+      | some s => Inv formula (CDCL.Machine.initial s)
 
 /-- running 分支必须给出真实逻辑 execution 以及输出的 representation、control 和 progress 事实。
 SemanticInv 不直接作为输出前提，而由逻辑 preservation 推导。
