@@ -39,7 +39,7 @@ inductive Progress where
 /-- Find the first nonfalse, nonwatched literal in source order. Structural
 recursion avoids allocating a range and early-return accumulator for every
 visited clause. The caller supplies the remaining arena length as a bound. -/
-private def replacementScan : Nat → Array Nat → Array Nat → Nat → Option Nat
+def replacementScan : Nat → Array Nat → Array Nat → Nat → Option Nat
   | 0, _, _, _ => none
   | fuel + 1, arena, marks, pos =>
     let lit := arena[pos]!
@@ -47,24 +47,24 @@ private def replacementScan : Nat → Array Nat → Array Nat → Nat → Option
     else if marks[lit]! == 0 then some pos
     else replacementScan fuel arena marks (pos + 1)
 
-private def replacement (arena marks : Array Nat) (clauseId : Nat) : Option Nat :=
+def replacement (arena marks : Array Nat) (clauseId : Nat) : Option Nat :=
   replacementScan (arena.size - (clauseId + 2)) arena marks (clauseId + 2)
 
-/-- Traverse the move-to-front list through assigned variables. Its acyclicity
-and coverage give a bound of `nVars + 1`; zero denotes an exhausted list. -/
-private def nextDecision (s : State) (cursor : Nat) : Nat := Id.run do
-  let mut cursor := cursor
-  for _ in [:s.nVars + 1] do
-    if cursor == 0 then
-      return 0
-    let positive := 2 * cursor
-    if s.mark positive == 0 && s.mark (positive + 1) == 0 then
-      return cursor
-    cursor := s.previous[cursor]!
-  return 0
+/-- Bounded traversal of the move-to-front list through assigned variables.
+Zero denotes an exhausted list or exhausted traversal budget. -/
+def nextDecisionScan : Nat → State → Nat → Nat
+  | 0, _, _ => 0
+  | fuel + 1, s, cursor =>
+    if cursor == 0 then 0
+    else if s.mark (2 * cursor) == 0 && s.mark (2 * cursor + 1) == 0 then cursor
+    else nextDecisionScan fuel s s.previous[cursor]!
+
+/-- The MTF list's acyclicity and coverage justify the `nVars + 1` bound. -/
+def nextDecision (s : State) (cursor : Nat) : Nat :=
+  nextDecisionScan (s.nVars + 1) s cursor
 
 /-- Reattach the two arrays temporarily owned by the propagation loop. -/
-@[inline] private def restoreWatchArrays (s : State) (arena first : Array Nat) : State :=
+@[inline] def restoreWatchArrays (s : State) (arena first : Array Nat) : State :=
   { s with arena := arena, first := first }
 
 /-- Traverse one false literal's watch list in the reference solver's order.
@@ -77,7 +77,7 @@ the temporarily detached state on its own.
 The initial arena length bounds an acyclic watch list. A replacement cannot be
 the current false literal, so moving a watch never adds to the list being scanned.
 Fuel exhaustion still returns a resumable cursor without a SAT/UNSAT claim. -/
-private def propagateWatches : Nat → State → Array Nat → Array Nat → Nat → Nat → Bool → Lit → Nat → Progress
+def propagateWatches : Nat → State → Array Nat → Array Nat → Nat → Nat → Bool → Lit → Nat → Progress
   | 0, s, arena, first, decision, oldLemmas, root, lit, previous =>
     .running ⟨restoreWatchArrays s arena first, decision, .watch, oldLemmas, root, lit, previous⟩
   | fuel + 1, s, arena, first, decision, oldLemmas, root, lit, previous => Id.run do
@@ -163,20 +163,5 @@ def runFor : Nat → Machine → Progress
     match step machine with
     | .finished result => .finished result
     | .running next => runFor fuel next
-
-/-- Unbounded execution is confined to this IO driver. The underlying state
-transition and resumable runner remain transparent, total Lean definitions. -/
-private partial def drive (machine : Machine) : IO SolveResult := do
-  match runFor 4096 machine with
-  | .finished result => return result
-  | .running next => drive next
-
-/-- Initialize and solve a formula without delegating to an external solver. -/
-def solve (formula : Formula) (config : Config := {}) : IO (Except String SolveResult) := do
-  match initState formula config with
-  | .error message => return .error message
-  | .ok none => return .ok (.unsat {})
-  | .ok (some state) =>
-    return .ok (← drive { solver := state, decision := state.head })
 
 end MicrosatLean.CDCL

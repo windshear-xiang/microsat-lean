@@ -32,6 +32,12 @@ models against the original input, including clauses normalized by the solver.
 | `CDCL.State` | Packed arena, linked watches, false-literal trail, phases, decision list and database reduction |
 | `CDCL.Analysis` | First-UIP resolution, recursive clause minimization, backjumping and LBD averages |
 | `CDCL.Search` | Propagation, decisions, adaptive restart and resumable search |
+| `Solver` | Input-bound precheck, initialization and standalone IO execution driver |
+
+The `Formula` and `CDCL` modules are copied unchanged from
+`Tim-dev-verification` at `9aea98c`. This branch omits its verification modules;
+`Solver` keeps the same input-bound precheck and uses a partial IO driver over
+the copied `runFor` and `step` definitions.
 
 The implementation preserves the source's watched-literal scan order,
 move-to-front variable heuristic, phase saving, first-UIP minimization, integer
@@ -63,7 +69,9 @@ The Lean tests exercise first-UIP resolution and minimization, nonchronological
 backjumping, root-preserving restarts, watch-list integrity and reason relocation
 through database reduction. They also compare resumed execution across chunk
 boundaries and check all 256 subsets of the eight nonempty, nontautological
-canonical clauses on two variables against exhaustive truth tables. The CNF
+canonical clauses on two variables against exhaustive truth tables, including
+the public solver under two configurations. Public-entry tests also check
+input-bound errors before early UNSAT. The CNF
 corpus separately covers empty clauses, tautologies, duplicates and input order.
 
 The Python runner executes all 128 CNF fixtures, checks statuses and complete
@@ -83,8 +91,9 @@ to 16 MiB for these tests. The checked-in C source remains unchanged.
 
 ## Verification status
 
-This is executable, tested code; solver correctness has not yet been formally
-proved. There are no added axioms, `sorry` proofs, or unsafe implementations.
+This branch contains executable, tested code without the formal verification
+modules from `Tim-dev-verification`. There are no added axioms, `sorry` proofs,
+or unsafe implementations.
 The parser, storage operations, conflict analysis, `step` and `runFor` are total
 Lean definitions. Only the thin unbounded IO execution driver is `partial`.
 `runFor` returns a resumable machine on fuel exhaustion, never a SAT/UNSAT answer.

@@ -1,4 +1,4 @@
-import MicrosatLean.CDCL.Search
+import MicrosatLean.Solver
 
 open MicrosatLean MicrosatLean.CDCL
 
@@ -202,6 +202,18 @@ private def checkResult (f : Formula) (expected : Bool) (progress : Progress) : 
     check (f.satisfiedBy model) "bounded search returned an invalid SAT model"
   | .finished (.unsat _) => check (!expected) "bounded search incorrectly classified a SAT formula as UNSAT"
 
+private def inputChecks : IO Unit := do
+  let invalid := #[formula 0 #[#[0]], formula 1 #[#[2]], formula 1 #[#[-2]],
+    formula 1 #[#[], #[2]], formula 1 #[#[1], #[-1], #[2]]]
+  for f in invalid do
+    match ← solve f with
+    | .error _ => pure ()
+    | .ok _ => throw (IO.userError "public solver must reject invalid bounds before early UNSAT")
+  for f in #[formula 0 #[], formula 0 #[#[]]] do
+    match ← solve f with
+    | .error message => throw (IO.userError message)
+    | .ok result => checkResult f (bruteForce f) (.finished result)
+
 private def chunkChecks : IO Unit := do
   let examples := #[formula 0 #[], formula 4 #[#[1, 2, 3, 4], #[-1], #[-2], #[-3]],
     formula 2 #[#[1, 2], #[1, -2], #[-1, 2], #[-1, -2]],
@@ -230,15 +242,20 @@ private def exhaustiveChecks : IO Unit := do
     | .ok none => check (!expected) "initialization rejected a satisfiable exhaustive formula"
     | .ok (some s) =>
       checkResult f expected (runFor 10000 { solver := s, decision := s.head })
+    for config in #[({} : Config), { initialLemmaLimit := 0, reductionK := 0 }] do
+      match ← solve f config with
+      | .error message => throw (IO.userError message)
+      | .ok result => checkResult f expected (.finished result)
 
 def run : IO Unit := do
   watchChecks
   analysisChecks
   restartChecks
   reductionChecks
+  inputChecks
   chunkChecks
   exhaustiveChecks
-  IO.println "CDCL regressions passed: watches, analysis, restart, reduction, chunking, and 256 exhaustive formulas"
+  IO.println "CDCL regressions passed: watches, analysis, restart, reduction, input validation, chunking, and 256 exhaustive formulas including the public solver under two configurations"
 
 end CDCLTests
 

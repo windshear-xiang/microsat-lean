@@ -38,7 +38,7 @@ def implied : Nat → State → Lit → State × Bool
     return (s.setMark lit 6, true)
 
 /-- Mark a clause suffix, also moving its variables to the heuristic front. -/
-private def markClause (s : State) (start : Nat) : State := Id.run do
+def markClause (s : State) (start : Nat) : State := Id.run do
   let mut s := s
   for i in [start : s.arena.size] do
     let lit := s.db i
@@ -49,7 +49,7 @@ private def markClause (s : State) (start : Nat) : State := Id.run do
 
 /-- The candidate is the first UIP precisely when no earlier marked literal
 occurs before the decision that begins its decision level. -/
-private def firstUIP (s : State) (candidate : Nat) : Bool := Id.run do
+def firstUIP (s : State) (candidate : Nat) : Bool := Id.run do
   for offset in [:candidate] do
     let lit := s.trail[candidate - 1 - offset]!
     if s.mark lit == 2 then
@@ -58,34 +58,13 @@ private def firstUIP (s : State) (candidate : Nat) : Bool := Id.run do
       return true
   return true
 
-/-- Resolve a non-root conflict, minimize the first-UIP clause, and backjump.
-`assigned` is normally a count; while analyzing it is the candidate's index,
-exactly like the decremented assignment pointer in the source implementation.
-The fixed-capacity trail preserves popped entries until clause construction
-finishes. The result points to the learned clause's first literal. -/
-def analyze (s : State) (conflictClauseId : Nat) : State × Nat := Id.run do
-  let mut s := { s with
-    res := s.res + 1
-    stats := { s.stats with conflicts := s.stats.conflicts + 1 } }
-  s := markClause s conflictClauseId
-  -- Each resolution removes one trail entry; the UIP itself remains assigned.
-  for _ in [:s.assigned] do
-    let candidate := s.assigned - 1
-    s := { s with assigned := candidate }
-    let lit := s.trail[candidate]!
-    if s.reason lit == 0 then
-      break
-    if s.mark lit == 2 then
-      if firstUIP s candidate then
-        break
-      s := markClause s (s.reason lit + 1)
-    s := s.unassign lit
-  let candidate := s.assigned
-  s := { s with processed := candidate }
+/-- Construct the minimized learned clause in reverse trail order, recording
+its backjump cursor and LBD. Earlier MARK tags remain available to `implied`. -/
+def buildLearned (s : State) (candidate : Nat) : State × Array Lit × Nat := Id.run do
+  let mut s := { s with processed := candidate }
   let mut learned : Array Lit := #[]
   let mut lbd := 0
   let mut levelUsed := false
-  -- Backward traversal leaves all earlier MARK tags available to minimization.
   for offset in [:candidate + 1 - s.forced] do
     let p := candidate - offset
     let lit := s.trail[p]!
@@ -102,13 +81,49 @@ def analyze (s : State) (conflictClauseId : Nat) : State × Nat := Id.run do
       if learned.size == 1 then
         s := { s with processed := p }
     s := s.setMark lit 1
+  return (s, learned, lbd)
+
+/-- Clear the analyzed candidate and every trail entry above the backjump
+cursor. Popped entries remain in the fixed-capacity trail array. -/
+def backjump (s : State) (candidate : Nat) : State := Id.run do
+  let mut s := s
+  for offset in [:candidate + 1 - s.processed] do
+    s := s.unassign s.trail[candidate - offset]!
+  return { s with assigned := s.processed }
+
+/-- Pop the conflict's implication graph until its decision or first UIP.
+During this phase `assigned` changes from a count to the candidate's index. -/
+def resolveToUIP (s : State) : State := Id.run do
+  let mut s := s
+  for _ in [:s.assigned] do
+    let candidate := s.assigned - 1
+    s := { s with assigned := candidate }
+    let lit := s.trail[candidate]!
+    if s.reason lit == 0 then break
+    if s.mark lit == 2 then
+      if firstUIP s candidate then break
+      s := markClause s (s.reason lit + 1)
+    s := s.unassign lit
+  return s
+
+/-- Resolve a non-root conflict, minimize the first-UIP clause, and backjump.
+`assigned` is normally a count; while analyzing it is the candidate's index,
+exactly like the decremented assignment pointer in the source implementation.
+The fixed-capacity trail preserves popped entries until clause construction
+finishes. The result points to the learned clause's first literal. -/
+def analyze (s : State) (conflictClauseId : Nat) : State × Nat := Id.run do
+  let mut s := { s with
+    res := s.res + 1
+    stats := { s.stats with conflicts := s.stats.conflicts + 1 } }
+  s := markClause s conflictClauseId
+  s := resolveToUIP s
+  let candidate := s.assigned
+  let (next, learned, lbd) := buildLearned s candidate
+  s := next
   s := { s with
     fast := s.fast - (s.fast >>> 5) + (lbd <<< 15)
     slow := s.slow - (s.slow >>> 15) + (lbd <<< 5) }
-  -- The candidate and the target decision are both removed before asserting.
-  for offset in [:candidate + 1 - s.processed] do
-    s := s.unassign s.trail[candidate - offset]!
-  s := { s with assigned := s.processed }
+  s := backjump s candidate
   return s.addClause learned false
 
 end MicrosatLean.CDCL
