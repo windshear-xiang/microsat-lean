@@ -220,7 +220,7 @@ private def chunkChecks : IO Unit := do
     formula 3 #[#[2, -1], #[3, -1], #[-2, -3]]]
   for f in examples do
     let s ← state f
-    let machine : Machine := { solver := s, decision := s.head }
+    let machine := Machine.initial s
     for first in #[0, 1, 2, 7, 31] do
       for second in #[0, 1, 3, 11, 100] do
         let combined := runFor (first + second) machine
@@ -241,7 +241,7 @@ private def exhaustiveChecks : IO Unit := do
     | .error message => throw (IO.userError message)
     | .ok none => check (!expected) "initialization rejected a satisfiable exhaustive formula"
     | .ok (some s) =>
-      checkResult f expected (runFor 10000 { solver := s, decision := s.head })
+      checkResult f expected (runFor 10000 (Machine.initial s))
     for config in #[({} : Config), { initialLemmaLimit := 0, reductionK := 0 }] do
       match ← solve f config with
       | .error message => throw (IO.userError message)

@@ -158,6 +158,4 @@ structure Certificate (formula : Formula) (m : CDCL.Machine)
 def Inv (formula : Formula) (m : CDCL.Machine) : Prop :=
   ∃ a w, Certificate formula m a w
 
-def InitialMachine (s : CDCL.State) : CDCL.Machine := { solver := s, decision := s.head }
-
 end MicrosatLean.Verification

@@ -22,7 +22,7 @@ def InitializationCorrect : Prop := ∀ formula,
     ∃ initialized, CDCL.initState formula config = .ok initialized ∧
       match initialized with
       | none => Std.Sat.CNF.Unsat (formulaView formula)
-      | some s => Inv formula (InitialMachine s)
+      | some s => Inv formula (CDCL.Machine.initial s)
 
 /-- Output storage/control/progress facts are obligations. Semantic validity
 is intentionally absent: Correctness derives it via LogicalExecution. -/

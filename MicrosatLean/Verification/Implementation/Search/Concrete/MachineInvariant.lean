@@ -105,7 +105,7 @@ def InvariantProgress (formula : Formula) : Progress → Prop
 invariant at the exact machine passed to the existing search driver. -/
 theorem initState_some_machineInvariant {formula : Formula} (wellFormed : WellFormed formula)
     {config : Config} {s : State} (success : initState formula config = .ok (some s)) :
-    MachineInvariant formula { solver := s, decision := s.head } := by
+    MachineInvariant formula (Machine.initial s) := by
   obtain ⟨original, learned, heads, rank, base⟩ := initState_some_certificate wellFormed success
   have cursors := initState_some_cursors wellFormed success
   have nondecision := initState_some_nondecision wellFormed success
@@ -121,7 +121,8 @@ theorem initState_some_machineInvariant {formula : Formula} (wellFormed : WellFo
     initState_some_rootTrail wellFormed success true rfl, nondecision⟩
   refine ⟨original, learned, heads, rank, base, ?_, initState_some_history wellFormed success _, saved,
     initState_some_unitTruth wellFormed success base, fun _ => DecisionCursor.head base.order, ?_, ?_⟩
-  · rw [initState_some_variables wellFormed success]
+  · change formula.numVars ≤ s.nVars
+    rw [initState_some_variables wellFormed success]
     omega
   · exact ⟨begin, DecisionCursor.head base.order, rfl, rfl, rfl, rfl, settled⟩
   · exact Nat.zero_le _

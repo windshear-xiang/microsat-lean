@@ -9,7 +9,7 @@ def solvePure (formula : Formula) (config : Config := {}) : Except String SolveR
     | .error message => .error message
     | .ok none => .ok (.unsat {})
     | .ok (some s) =>
-      .ok (run formula (Verification.InitialMachine s)
+      .ok (run formula (Machine.initial s)
         (Verification.initial_invariant valid initialized))
   else .error "literal outside the declared variable bounds"
 

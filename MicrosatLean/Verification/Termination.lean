@@ -21,7 +21,7 @@ No theorem in this module assumes validity of a returned SAT/UNSAT result.
 theorem initial_invariant {formula : Formula} (valid : WellFormed formula)
     {config : CDCL.Config} {s : CDCL.State}
     (initialized : CDCL.initState formula config = .ok (some s)) :
-    Inv formula (InitialMachine s) :=
+    Inv formula (CDCL.Machine.initial s) :=
   Implementation.Bridge.of_concrete valid
     (Implementation.Search.Concrete.initState_some_machineInvariant valid initialized)
     (Implementation.Initialization.initState_some_variables valid initialized)

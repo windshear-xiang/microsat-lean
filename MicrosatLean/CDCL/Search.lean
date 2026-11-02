@@ -31,6 +31,10 @@ structure Machine where
   previousWatch : Nat := 0
   deriving Repr, Inhabited
 
+/-- Construct the initial search machine with its decision cursor at the MTF
+head and the remaining control fields at their defaults. -/
+def Machine.initial (s : State) : Machine := { solver := s, decision := s.head }
+
 inductive Progress where
   | running (machine : Machine)
   | finished (result : SolveResult)
