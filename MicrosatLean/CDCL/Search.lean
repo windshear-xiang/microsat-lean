@@ -1,44 +1,62 @@
 import MicrosatLean.CDCL.Analysis
 
+/-!
+分阶段 CDCL 搜索：显式保留传播游标，将实际搜索拆分为全函数 `step`，并提供有界 `runFor` 入口。
+-/
+
 namespace MicrosatLean.CDCL
 
-/-- A completed search, including the saved assignment for satisfiable inputs. -/
+/-- 已完成搜索的结果；SAT 分支包含保存的完整赋值数组和执行统计。 -/
 inductive SolveResult where
+  /-- 找到满足输入的模型，并附带执行统计。 -/
   | sat (model : Array Bool) (stats : Stats)
+  /-- 判定输入不可满足，并附带执行统计。 -/
   | unsat (stats : Stats)
   deriving Repr, Inhabited
 
-/-- The propagation cursor makes even an unbounded search a sequence of total
-transitions. A watch step handles a bounded part of one literal's watch list;
-analysis is bounded by the trail. -/
+/-- 将持续搜索拆分为一系列全函数 transition 的执行阶段。
+watch 阶段处理一个文字的有界 watch 扫描；冲突分析也由 trail 长度限制。 -/
 inductive Phase where
+  /-- 开始一轮 propagation，记录学习子句数并确定 root 模式。 -/
   | beginPropagation
+  /-- 取出下一个待传播假文字，或在传播完成后进入 choose。 -/
   | nextLiteral
+  /-- 扫描当前假文字的 watch 链表，处理替代 watch、unit 或冲突。 -/
   | watch
+  /-- 按需 restart 和 reduction，然后选择新 decision 或返回 SAT。 -/
   | choose
   deriving Repr, Inhabited
 
-/-- `previousWatch = 0` means the current list's head; otherwise its next link.
-`root` is preserved across a propagation invocation, including its conflicts,
-and becomes true when analysis derives a unit clause. -/
+/-- 求解器状态以及恢复分阶段执行所需的控制信息。
+`previousWatch = 0` 表示位于当前链表头，否则从该引用的下一链接继续。
+`root` 在一次 propagation 及其冲突处理中保持，分析得到 unit 子句时转为 true。 -/
 structure Machine where
+  /-- 具体子句数据库、赋值、启发式信息及统计。 -/
   solver : State
+  /-- 当前 MTF decision 搜索游标。 -/
   decision : Nat
+  /-- 下一步要执行的阶段。 -/
   phase : Phase := .beginPropagation
+  /-- 本轮 propagation 开始时的学习子句数量，用于检测本轮是否发生 learning。 -/
   oldLemmas : Nat := 0
+  /-- 当前 propagation 是否处于 root 模式。 -/
   root : Bool := false
+  /-- watch 阶段正在处理的假文字，其他阶段通常为 0。 -/
   currentLit : Lit := 0
+  /-- 当前 watch 链表中最近访问的引用；0 表示从链表头继续。 -/
   previousWatch : Nat := 0
   deriving Repr, Inhabited
 
+/-- 一次 transition 或一批执行的结果：可恢复的机器，或已经完成的求解结果。 -/
 inductive Progress where
+  /-- 搜索尚未结束，保存可继续执行的完整机器。 -/
   | running (machine : Machine)
+  /-- 搜索已经完成，携带 SAT 或 UNSAT 结果。 -/
   | finished (result : SolveResult)
   deriving Repr, Inhabited
 
-/-- Find the first nonfalse, nonwatched literal in source order. Structural
-recursion avoids allocating a range and early-return accumulator for every
-visited clause. The caller supplies the remaining arena length as a bound. -/
+/-- 按源实现顺序寻找首个未被标为假的候选文字；调用者从两个 watch 之后开始扫描。
+结构递归避免每访问一个子句就分配 range 和提前返回累加器；扫描上界是剩余 arena 长度。 -/
 def replacementScan : Nat → Array Nat → Array Nat → Nat → Option Nat
   | 0, _, _, _ => none
   | fuel + 1, arena, marks, pos =>
@@ -47,11 +65,12 @@ def replacementScan : Nat → Array Nat → Array Nat → Nat → Option Nat
     else if marks[lit]! == 0 then some pos
     else replacementScan fuel arena marks (pos + 1)
 
+/-- 跳过子句的两个 watch，在剩余文字中寻找替代 watch；没有候选项时返回 `none`。 -/
 def replacement (arena marks : Array Nat) (clauseId : Nat) : Option Nat :=
   replacementScan (arena.size - (clauseId + 2)) arena marks (clauseId + 2)
 
-/-- Bounded traversal of the move-to-front list through assigned variables.
-Zero denotes an exhausted list or exhausted traversal budget. -/
+/-- 沿 MTF（move-to-front）链表跳过已赋值变量，寻找下一个 decision 变量。
+链表结束或遍历预算耗尽时均返回 0。 -/
 def nextDecisionScan : Nat → State → Nat → Nat
   | 0, _, _ => 0
   | fuel + 1, s, cursor =>
@@ -59,24 +78,21 @@ def nextDecisionScan : Nat → State → Nat → Nat
     else if s.mark (2 * cursor) == 0 && s.mark (2 * cursor + 1) == 0 then cursor
     else nextDecisionScan fuel s s.previous[cursor]!
 
-/-- The MTF list's acyclicity and coverage justify the `nVars + 1` bound. -/
+/-- 使用 `nVars + 1` 的预算寻找 decision 变量；预算充分性由 MTF 链表无环且覆盖变量来保证。 -/
 def nextDecision (s : State) (cursor : Nat) : Nat :=
   nextDecisionScan (s.nVars + 1) s cursor
 
-/-- Reattach the two arrays temporarily owned by the propagation loop. -/
+/-- 把 propagation 循环临时持有的 arena 和 watch 头数组装回状态。 -/
 @[inline] def restoreWatchArrays (s : State) (arena first : Array Nat) : State :=
   { s with arena := arena, first := first }
 
-/-- Traverse one false literal's watch list in the reference solver's order.
-The arena and watch heads are detached from `s`, avoiding reconstruction of all
-state fields at every clause. The complete state is restored before assignment,
-analysis, or any return. The other state fields remain unchanged during a scan.
-The representation invariant concerns `restoreWatchArrays s arena first`, not
-the temporarily detached state on its own.
+/-- 按参考求解器的顺序遍历一个假文字的 watch 链表。
+将 arena 和 watch 头数组从 `s` 中临时取出，避免访问每个子句时重建所有状态字段。
+在赋值、分析和返回之前恢复完整状态；扫描期间其他字段不变。
+representation invariant 描述的是 `restoreWatchArrays s arena first`，而非临时缺少数组的状态。
 
-The initial arena length bounds an acyclic watch list. A replacement cannot be
-the current false literal, so moving a watch never adds to the list being scanned.
-Fuel exhaustion still returns a resumable cursor without a SAT/UNSAT claim. -/
+初始 arena 长度足以限制无环 watch 链表。替代文字不可能是当前假文字，
+因此移动 watch 不会向正在扫描的链表添加条目。预算耗尽时仍返回可恢复游标，不声称 SAT/UNSAT。 -/
 def propagateWatches : Nat → State → Array Nat → Array Nat → Nat → Nat → Bool → Lit → Nat → Progress
   | 0, s, arena, first, decision, oldLemmas, root, lit, previous =>
     .running ⟨restoreWatchArrays s arena first, decision, .watch, oldLemmas, root, lit, previous⟩
@@ -85,7 +101,7 @@ def propagateWatches : Nat → State → Array Nat → Array Nat → Nat → Nat
     if ref == 0 then
       return .running ⟨restoreWatchArrays s arena first, decision, .nextLiteral, oldLemmas, root, 0, 0⟩
     let clauseId := watchClause ref
-    -- Keep the other watch first, then preserve the exact source scan/swap order.
+    -- 先将另一个 watch 放到首位，再保持与源实现相同的扫描和交换顺序。
     let arena := if arena[clauseId]! == lit then
         arena.set! clauseId arena[clauseId + 1]!
       else arena
@@ -116,9 +132,8 @@ def propagateWatches : Nat → State → Array Nat → Array Nat → Nat → Nat
       let s := s.assign learned root
       return .running ⟨s, decision, .nextLiteral, oldLemmas, root, 0, 0⟩
 
-/-- Perform one faithful CDCL transition, batching watch-list visits until a
-unit, conflict, list end, or finite bound. All internal scans are bounded by
-finite arrays. Only the outer execution driver is unbounded. -/
+/-- 执行一次 CDCL transition，将 watch 访问合并到遇到 unit、冲突、链尾或有限预算为止。
+所有内部扫描都受有限数组长度限制；外层驱动负责持续执行。 -/
 def step (machine : Machine) : Progress := Id.run do
   let ⟨s, decision, phase, oldLemmas, root, lit, previous⟩ := machine
   match phase with
@@ -153,10 +168,9 @@ def step (machine : Machine) : Progress := Id.run do
     s := s.decide decision
     return .running ⟨s, decision, .beginPropagation, 0, false, 0, 0⟩
 
-/-- Execute at most `fuel` transitions, returning a resumable machine when the
-budget expires. Exhaustion is never classified as SAT or UNSAT. This total API
-is the intended entry point for future invariant and refinement proofs. A watch
-transition may visit several clauses, with its own arena-length bound. -/
+/-- 最多执行 `fuel` 次 transition；预算耗尽时返回可恢复机器，不判定 SAT/UNSAT。
+这是会终止的 API，供 invariant 和 refinement 证明使用。
+单次 watch transition 可以访问多个子句，并有独立的 arena 长度上界。 -/
 def runFor : Nat → Machine → Progress
   | 0, machine => .running machine
   | fuel + 1, machine =>
