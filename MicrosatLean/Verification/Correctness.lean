@@ -1,15 +1,16 @@
 import MicrosatLean.Solver
 import MicrosatLean.Verification.Implementation.Obligations
 
-namespace MicrosatLean.Verification
-
-/-!
-The executable definitions live in CDCL/Runner and Solver. This module proves
-their finite runFor correspondence and result correctness after the fact.
-Theorems ending in `_with` expose the logical implementation contracts; the
-public correctness theorems instantiate them with the closed actual proofs.
+/-! 执行定义位于 CDCL/Runner 与 Solver。本模块在这些定义之后证明有限 runFor 对应关系和结果有效性。
+_with 定理显式接收实现 contracts；公开 correctness theorems 使用已经完成的 actualFacts。
+证明链是 step correctness → 有限 runFor correctness → run_finishes → runner correctness → 公开 solver correctness。
 -/
 
+namespace MicrosatLean.Verification
+
+/-- 将 phase contracts、逻辑 preservation 和 terminal soundness 组合为实际 step 的 correctness。
+running 时保持 Inv，finished 时得到原始输入的 ValidResult。
+-/
 theorem step_correct_with (facts : ImplementationFacts) {formula : Formula}
     {machine : CDCL.Machine} (valid : Inv formula machine) :
     InvariantProgress formula (CDCL.step machine) := by
@@ -25,6 +26,7 @@ theorem step_correct_with (facts : ImplementationFacts) {formula : Formula}
     exact facts.terminal formula next result
       (execution_preserves facts.logicalMoves certificate.semantic execution) terminal
 
+/-- 对 fuel 归纳，将一步 correctness 扩展到任意有界 runFor；预算用尽时仍保留可继续的 invariant。 -/
 theorem runFor_correct_with (facts : ImplementationFacts) {formula : Formula}
     (fuel : Nat) {machine : CDCL.Machine} (valid : Inv formula machine) :
     InvariantProgress formula (CDCL.runFor fuel machine) := by
@@ -40,7 +42,9 @@ theorem runFor_correct_with (facts : ImplementationFacts) {formula : Formula}
     | finished result =>
       simpa only [CDCL.runFor, transition, InvariantProgress] using safe
 
-/-- The plain runner follows a finite execution of the actual bounded runner. -/
+/-- 证明普通 total runner 的返回值来自某个有限 fuel 的真实 runFor 执行。
+按与 runner 相同的 variant 递归建立对应关系，不在执行返回值中携带该 certificate。
+-/
 theorem run_finishes (formula : Formula) (machine : CDCL.Machine)
     (valid : Inv formula machine) :
     ∃ fuel, CDCL.runFor fuel machine = .finished (CDCL.run formula machine valid) := by
@@ -54,13 +58,14 @@ theorem run_finishes (formula : Formula) (machine : CDCL.Machine)
 termination_by variant (max 1 formula.numVars) machine
 decreasing_by exact step_decreases valid (by assumption)
 
-/-- Result validity is a theorem about the plain executable runner. -/
+/-- 先用 run_finishes 找到有限执行，再用 runFor correctness 推出普通 runner 的返回结果满足 ValidResult。 -/
 theorem run_correct {formula : Formula} {machine : CDCL.Machine}
     (valid : Inv formula machine) : ValidResult formula (CDCL.run formula machine valid) := by
   obtain ⟨fuel, finished⟩ := run_finishes formula machine valid
   have safe := runFor_correct_with Implementation.actualFacts fuel valid
   simpa only [finished, InvariantProgress] using safe
 
+/-- 真实初始化成功后，存在有限 runFor 执行返回有效结果；显式 facts 用于有限执行的 correctness composition。 -/
 theorem initialized_search_correct_with (facts : ImplementationFacts) {formula : Formula}
     (valid : WellFormed formula) {config : CDCL.Config} {s : CDCL.State}
     (initialized : CDCL.initState formula config = .ok (some s)) :
@@ -70,10 +75,13 @@ theorem initialized_search_correct_with (facts : ImplementationFacts) {formula :
   have safe := runFor_correct_with facts fuel initial
   exact ⟨fuel, _, finished, by simpa only [finished, InvariantProgress] using safe⟩
 
-/-- Compatibility name for the public pure solver; it adds no execution layer. -/
+/-- 保留旧 API 名称的 abbrev，直接指向公开纯求解器 solvePure，不增加执行层。 -/
 abbrev solveCertified (formula : Formula) (config : CDCL.Config := {}) :=
   CDCL.solvePure formula config
 
+/-- 任意合法 Formula 与 Config 上，公开纯求解器返回某个 .ok result，且 result 满足最终 specification。
+分别处理初始化错误不可能、提前 UNSAT 和正常 runner 返回三种分支。
+-/
 theorem solveCertified_correct (formula : Formula) (valid : WellFormed formula)
     (config : CDCL.Config := {}) :
     ∃ result, solveCertified formula config = .ok result ∧ ValidResult formula result := by
@@ -90,6 +98,7 @@ theorem solveCertified_correct (formula : Formula) (valid : WellFormed formula)
     exact ⟨.unsat {}, rfl, by simpa only [same, ValidResult] using checked⟩
   · exact ⟨_, rfl, run_correct _⟩
 
+/-- 只要纯求解器实际返回 .ok result，该结果就有效；非法输入不会产生 .ok。 -/
 theorem solveCertified_ok_valid {formula : Formula} {config : CDCL.Config}
     {result : CDCL.SolveResult} (returned : solveCertified formula config = .ok result) :
     ValidResult formula result := by
@@ -100,15 +109,17 @@ theorem solveCertified_ok_valid {formula : Formula} {config : CDCL.Config}
   · simp only [solveCertified, CDCL.solvePure, dite_eq_right valid] at returned
     cases returned
 
-/-- Compatibility name retained for callers of the initial framework. -/
+/-- 兼容最初 scaffold 的名称；同样直接指向 solvePure。 -/
 abbrev solveScaffold (formula : Formula) (config : CDCL.Config := {}) :=
   CDCL.solvePure formula config
 
+/-- 以旧 scaffold API 名称提供同一份完整 solver correctness theorem。 -/
 theorem solveScaffold_correct (formula : Formula) (valid : WellFormed formula)
     (config : CDCL.Config := {}) :
     ∃ result, solveScaffold formula config = .ok result ∧ ValidResult formula result :=
   solveCertified_correct formula valid config
 
+/-- 对任意合法输入的真实初始化成功状态，存在有限 step 数完成搜索，并返回符合 specification 的结果。 -/
 theorem initialized_search_terminates {formula : Formula} (valid : WellFormed formula)
     {config : CDCL.Config} {s : CDCL.State}
     (initialized : CDCL.initState formula config = .ok (some s)) :
@@ -119,7 +130,7 @@ end MicrosatLean.Verification
 
 namespace MicrosatLean.CDCL
 
-/-- The public IO entry returns a valid result for every well-formed input. -/
+/-- 把纯求解器 correctness 连接到公开 IO 包装：合法输入上 solve 等于返回有效 .ok result 的 pure IO。 -/
 theorem solve_correct (formula : Formula) (valid : Verification.WellFormed formula)
     (config : Config := {}) :
     ∃ result, solve formula config = pure (.ok result) ∧ Verification.ValidResult formula result := by
