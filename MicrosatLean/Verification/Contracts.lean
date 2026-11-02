@@ -4,9 +4,9 @@ import MicrosatLean.Verification.Progress
 namespace MicrosatLean.Verification
 
 /-!
-This file declares obligations as propositions. It does not assume them as
-axioms. `Implementation/Obligations.lean` currently supplies explicit admitted
-proofs. Replacing that file with concrete proofs closes the same public API.
+This file declares obligations as propositions, not axioms.
+`Implementation/Obligations.lean` assembles their concrete proofs. The generic
+composition exposes this package explicitly; the public solver supplies it.
 
 Dependencies: definitions -> contracts -> implementation proofs -> correctness.
 No implementation proof may import Correctness or change this specification

@@ -3,10 +3,10 @@ import MicrosatLean.Verification.Implementation.Obligations
 namespace MicrosatLean.Verification
 
 /-!
-Composition contains no sorry. Theorems ending in `_with` state their proof
-dependencies explicitly. The final entry specializes them to the eight
-admitted implementation obligations, so it is still a scaffold, not a verified
-solver. The native CLI continues to use its existing standalone IO driver.
+Theorems ending in `_with` expose the implementation interface explicitly.
+The final solver instantiates it with the closed implementation proofs. Values
+are computed by the real transition; well-founded recursion supplies a total
+runner, and its certificate connects the result to finite `runFor` execution.
 -/
 
 theorem step_correct_with (facts : ImplementationFacts) {formula : Formula}
@@ -136,15 +136,32 @@ theorem solve_correct_with (facts : ImplementationFacts) (formula : Formula)
     by simp only [solveWith, dite_eq_left valid],
     solveWellFormed_correct_with facts formula valid config⟩
 
-/-- Experimental entry: depends on admitted proofs. It is intentionally not
-installed as CDCL.solve or imported by the production CLI. -/
-def solveScaffold (formula : Formula) (config : CDCL.Config := {}) : Except String CDCL.SolveResult :=
+/-- Total certified entry used by the public IO wrapper. -/
+def solveCertified (formula : Formula) (config : CDCL.Config := {}) : Except String CDCL.SolveResult :=
   solveWith Implementation.actualFacts formula config
+
+theorem solveCertified_correct (formula : Formula) (valid : WellFormed formula)
+    (config : CDCL.Config := {}) :
+    ∃ result, solveCertified formula config = .ok result ∧ ValidResult formula result :=
+  solve_correct_with Implementation.actualFacts formula valid config
+
+theorem solveCertified_ok_valid {formula : Formula} {config : CDCL.Config}
+    {result : CDCL.SolveResult} (returned : solveCertified formula config = .ok result) :
+    ValidResult formula result := by
+  unfold solveCertified solveWith at returned
+  split at returned
+  · cases returned
+    exact solveWellFormed_correct_with _ _ _ _
+  · cases returned
+
+/-- Compatibility name retained for callers of the initial framework. -/
+abbrev solveScaffold (formula : Formula) (config : CDCL.Config := {}) :=
+  solveCertified formula config
 
 theorem solveScaffold_correct (formula : Formula) (valid : WellFormed formula)
     (config : CDCL.Config := {}) :
     ∃ result, solveScaffold formula config = .ok result ∧ ValidResult formula result :=
-  solve_correct_with Implementation.actualFacts formula valid config
+  solveCertified_correct formula valid config
 
 theorem initialized_search_terminates {formula : Formula} (valid : WellFormed formula)
     {config : CDCL.Config} {s : CDCL.State}

@@ -1,53 +1,58 @@
 import MicrosatLean.Verification.Contracts
+import MicrosatLean.Verification.Implementation.Logic.Terminal
+import MicrosatLean.Verification.Implementation.Logic.Moves
+import MicrosatLean.Verification.Implementation.Search.Begin
+import MicrosatLean.Verification.Implementation.Search.Next
+import MicrosatLean.Verification.Implementation.Bridge.ToNativeInitialization
+import MicrosatLean.Verification.Implementation.Bridge.ToNativeProgress
+import MicrosatLean.Verification.Implementation.Search.Watch
+import MicrosatLean.Verification.Implementation.Search.Choose
 
 namespace MicrosatLean.Verification.Implementation
 
 /-!
-ADMITTED IMPLEMENTATION OBLIGATIONS -- this is not completed verification.
-
-Each named theorem is a replaceable leaf of the framework. Do not move these
-assumptions into Inv, strengthen public input bounds, or add axioms. Future
-proofs may be split into child modules while preserving these statements.
-The audit in tests/Verification.lean lists every direct admission and checks
-that none is hidden in a definition or in the composition proof.
+The implementation obligations are discharged by the modules imported above.
+This small assembly is the only implementation package used by Correctness.
+Logical rules, real phase refinement and concrete rank decrease remain separate
+proofs. Their source-specific details live below Search, Bridge and Native.
 -/
 
 /-- Pure logical obligation: ordered reasons survive append/truncation,
 learning/forgetting/permutation preserve meaning, and root promotion is sound. -/
 theorem logical_moves : LogicalSoundness := by
-  sorry
+  exact Logic.logical_moves
 
 /-- Pure logical obligation: complete unit closure yields SAT; a false clause
 on an input-entailed root trail yields UNSAT, using the standard CNF semantics. -/
 theorem terminal : TerminalSoundness := by
-  sorry
+  exact Logic.terminal
 
 /-- Actual normalization, packed allocation, initial units and watch lists. -/
 theorem initialization : InitializationCorrect := by
-  sorry
+  exact Bridge.concrete_initialization
 
 /-- Actual root-mode guard, old-counter reset and unchanged state fields. -/
 theorem begin_propagation : PhaseCorrect .beginPropagation := by
-  sorry
+  exact Search.begin_propagation
 
 /-- Actual pending-literal branch or propagation-completion/root commit. -/
 theorem next_literal : PhaseCorrect .nextLiteral := by
-  sorry
+  exact Search.next_literal
 
 /-- Actual watch loops, no missed/exhausted scans, unit reasons, first-UIP,
 recursive minimization, backjump/assertion, and saved-prefix recovery. -/
 theorem watch : PhaseCorrect .watch := by
-  sorry
+  exact Search.watch
 
 /-- Actual restart/reduction, reason relocation, decision cursor, fresh
 decision or genuine SAT completion. No after-closure premise is supplied. -/
 theorem choose : PhaseCorrect .choose := by
-  sorry
+  exact Search.choose
 
 /-- Actual rank decrease, including canonical freshness, the 3^n bound,
 limit growth under reduction, restart credit and finite internal scans. -/
 theorem decreases : StepDecreases := by
-  sorry
+  exact Bridge.concrete_decreases
 
 theorem actualFacts : ImplementationFacts :=
   ⟨logical_moves, terminal, initialization, begin_propagation,

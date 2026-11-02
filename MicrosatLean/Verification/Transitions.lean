@@ -4,9 +4,9 @@ namespace MicrosatLean.Verification
 
 /-!
 These are admissible logical moves, not a second executable solver. Every
-premise about a learned clause or a unit must eventually be derived from the
-actual code. Semantic preservation of this relation is an explicit outstanding
-obligation. Concrete watch/control preservation is a different obligation.
+premise about a learned clause or a unit must be derived from the
+actual code. Semantic preservation is proved in Implementation/Logic/Moves.
+Concrete watch/control preservation is a separate implementation proof.
 -/
 
 def appendEntry (a : LogicalState) (lit : Literal) (reason : Option Clause) : LogicalState :=
@@ -81,7 +81,7 @@ def Terminal (formula : Formula) (a : LogicalState) : CDCL.SolveResult → Prop
 def TerminalSoundness : Prop := ∀ formula a result,
   SemanticInv (formulaView formula) a → Terminal formula a result → ValidResult formula result
 
-/-- A small semantic rule that the eventual implementation proof can reuse. -/
+/-- A semantic rule for forcing the remaining literal of a satisfied clause. -/
 theorem forced_head {valuation : Assignment} {clause : Clause} {head : Literal}
     (satisfied : Std.Sat.CNF.Clause.Sat valuation clause)
     (tails : ∀ lit ∈ clause, lit ≠ head → valuation lit.1 ≠ lit.2) :

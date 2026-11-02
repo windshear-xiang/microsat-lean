@@ -3,7 +3,7 @@ import MicrosatLean.Verification.Invariant
 namespace MicrosatLean.Verification
 
 /-!
-Candidate rank for the existing restart/reduction policy. The arithmetic is
+Termination rank for the existing restart/reduction policy. The arithmetic is
 separate from the obligation that every actual running step decreases it.
 `3^n` counts ternary polarity choices, not assignments. Freshness concerns the
 retained learned clauses; deleting and relearning is handled by limit growth.

@@ -86,6 +86,14 @@ def NonrootMode (m : CDCL.Machine) (a : LogicalState) : Prop :=
 
 def PropagationMode (m : CDCL.Machine) (a : LogicalState) : Prop :=
   (m.root = true → ∀ i, i < m.solver.assigned → m.solver.mark m.solver.trail[i]! = 6) ∧
+  (m.root = false → NonrootMode m a)
+
+/-- An idle next-literal phase may have a root-only trail with a false mode
+flag. An active watch phase cannot: its conflict branch needs a real nonroot
+decision when root is false. Keeping these cases separate excludes unreachable
+states without restricting any input formula or configuration. -/
+def NextMode (m : CDCL.Machine) (a : LogicalState) : Prop :=
+  (m.root = true → ∀ i, i < m.solver.assigned → m.solver.mark m.solver.trail[i]! = 6) ∧
   (m.root = false → a.trail.length = a.rootSize ∨ NonrootMode m a)
 
 def BeginEvidence (m : CDCL.Machine) (a : LogicalState) : Prop :=
@@ -100,7 +108,7 @@ def PhaseInv (m : CDCL.Machine) (a : LogicalState) (w : RepresentationWitness) :
   | .beginPropagation => BeginEvidence m a ∧ DecisionCursor a w m.decision ∧
       m.oldLemmas = 0 ∧ m.root = false ∧ m.currentLit = 0 ∧ m.previousWatch = 0 ∧
       SettledPrefix a w m.solver.processed
-  | .nextLiteral => PropagationMode m a ∧ m.currentLit = 0 ∧ m.previousWatch = 0 ∧
+  | .nextLiteral => NextMode m a ∧ m.currentLit = 0 ∧ m.previousWatch = 0 ∧
       SettledPrefix a w m.solver.processed
   | .watch => PropagationMode m a ∧ 0 < m.solver.processed ∧
       m.currentLit = m.solver.trail[m.solver.processed - 1]! ∧

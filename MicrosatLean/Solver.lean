@@ -1,23 +1,17 @@
-import MicrosatLean.CDCL.Search
+import MicrosatLean.Verification.Correctness
 
 namespace MicrosatLean.CDCL
 
-/-- Resume the copied CDCL transition runner without proof dependencies.
-Only this unbounded IO driver is partial; each batch remains total. -/
-private partial def drive (machine : Machine) : IO SolveResult := do
-  match runFor 4096 machine with
-  | .finished result => return result
-  | .running next => drive next
+/-- Execute the same CDCL transition through its proved total runner. -/
+def solve (formula : Formula) (config : Config := {}) : IO (Except String SolveResult) :=
+  pure (Verification.solveCertified formula config)
 
-/-- Check all input bounds before initialization, then execute the CDCL core.
-The precheck matches the public entry point in `Tim-dev-verification`. -/
-def solve (formula : Formula) (config : Config := {}) : IO (Except String SolveResult) := do
-  if !formula.wellFormed then
-    return .error "literal outside the declared variable bounds"
-  match initState formula config with
-  | .error message => return .error message
-  | .ok none => return .ok (.unsat {})
-  | .ok (some state) =>
-    return .ok (← drive { solver := state, decision := state.head })
+/-- The public IO entry returns a valid result for every well-formed input.
+The implementation package and all its dependencies are proved. -/
+theorem solve_correct (formula : Formula) (valid : Verification.WellFormed formula)
+    (config : Config := {}) :
+    ∃ result, solve formula config = pure (.ok result) ∧ Verification.ValidResult formula result := by
+  obtain ⟨result, returned, correct⟩ := Verification.solveCertified_correct formula valid config
+  exact ⟨result, by simp only [solve, returned], correct⟩
 
 end MicrosatLean.CDCL
