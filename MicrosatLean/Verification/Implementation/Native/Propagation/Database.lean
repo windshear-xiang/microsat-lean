@@ -254,7 +254,7 @@ theorem databaseView_swapEntries_sat_iff (id left right : Nat) (entries : List S
     obtain ⟨old, oldMember, rfl⟩ := List.mem_map.mp member
     exact (swapEntry_sat_iff id left right old a).mpr (model old oldMember)
 
-theorem DatabaseMeaning.swapLiterals {formula : CNF Nat} {original learned : List StoredClause}
+theorem DatabaseMeaning.swapLiterals {formula : Std.Sat.CNF Nat} {original learned : List StoredClause}
     (meaning : DatabaseMeaning formula original learned) (id left right : Nat) :
     DatabaseMeaning formula (original.map (swapEntry id left right))
       (learned.map (swapEntry id left right)) := by

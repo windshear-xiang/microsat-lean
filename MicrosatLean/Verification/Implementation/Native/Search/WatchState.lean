@@ -9,7 +9,7 @@ open CDCL Representation Propagation Analysis Std.Sat
 /-- Actual successful replacement preserves every base certificate field.
 The false current watch excludes active reason movement; literal permutations
 preserve normalization, canonical learned keys, and saved decision history. -/
-theorem StateCertificate.moveWatch {formula : CNF Nat} {s : State}
+theorem StateCertificate.moveWatch {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     {lit : Lit} {previous ref pos : Nat} {rest : List Nat}
@@ -53,7 +53,7 @@ theorem StateCertificate.moveWatch {formula : CNF Nat} {s : State}
 /-- Keeping a false watch after an unsuccessful replacement scan preserves
 the full base certificate. An active reason keeps its true head first because
 that head is unmarked and cannot equal the false current literal. -/
-theorem StateCertificate.retainWatch {formula : CNF Nat} {s : State}
+theorem StateCertificate.retainWatch {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     {lit : Lit} {ref : Nat} (current : ref ∈ heads lit) (falseLit : s.mark lit ≠ 0) :

@@ -8,7 +8,7 @@ open CDCL Representation Propagation Std.Sat
 
 /-- The actual backjump boundary selects a saved predecision watch prefix;
 all of its old truth witnesses are physically retained by the real analyzer. -/
-theorem DecisionWatchHistory.analyze_old_prefix {formula : CNF Nat} {s : State}
+theorem DecisionWatchHistory.analyze_old_prefix {formula : Std.Sat.CNF Nat} {s : State}
     {conflict decision : Nat} {lits : Array Lit} {rank : Lit → Nat}
     {entries : List StoredClause} {heads : Nat → List Nat}
     (history : DecisionWatchHistory s entries heads)
@@ -21,7 +21,7 @@ theorem DecisionWatchHistory.analyze_old_prefix {formula : CNF Nat} {s : State}
 /-- Unit clauses in the old database are already true inside the actual
 retained birth prefix. This follows from saved closure, even if an unrelated
 active-trail truth witness would have been removed by the backjump. -/
-theorem DecisionHistory.analyze_old_units {formula : CNF Nat} {s : State}
+theorem DecisionHistory.analyze_old_units {formula : Std.Sat.CNF Nat} {s : State}
     {conflict decision : Nat} {lits : Array Lit} {rank : Lit → Nat} {entries : List StoredClause}
     (history : DecisionHistory s entries)
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) :

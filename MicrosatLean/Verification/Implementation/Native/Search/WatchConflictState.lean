@@ -7,7 +7,7 @@ open CDCL Representation Propagation Analysis Std.Sat
 
 /-- The real failed scan and false remaining watch establish an all-false
 genuine stored clause after the exact orientation writes. -/
-theorem StateCertificate.retainedConflict {formula : CNF Nat} {s : State}
+theorem StateCertificate.retainedConflict {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     {lit : Lit} {ref : Nat} (current : ref ∈ heads lit) (falseLit : s.mark lit ≠ 0)
@@ -55,7 +55,7 @@ theorem StateCertificate.retainedConflict {formula : CNF Nat} {s : State}
   · simpa only [first, packedId, retained, State.mark, State.db] using head
   · exact unit query queryMember first
 
-theorem StateCertificate.root_conflict_unsat {formula : CNF Nat} {s : State}
+theorem StateCertificate.root_conflict_unsat {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (rootTags : ∀ i, i < s.assigned → s.mark s.trail[i]! = 6)
@@ -71,7 +71,7 @@ theorem StateCertificate.root_conflict_unsat {formula : CNF Nat} {s : State}
 
 /-- The actual nonroot conflict analyzes the genuine all-false clause and
 asserts its learned head, preserving full state and decision-history evidence. -/
-theorem StateCertificate.watchConflict {formula : CNF Nat} {s : State}
+theorem StateCertificate.watchConflict {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (history : DecisionHistory s (original ++ learned)) (phase : NonrootPhase s)

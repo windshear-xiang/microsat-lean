@@ -68,7 +68,7 @@ theorem trailCompatible_assign_iff {s : State} {a : Nat → Bool}
 
 /-- Semantic reason dependencies: a propagated entry follows from the input
 and the earlier trail assumptions. A decision is identified by reason zero. -/
-def ReasonConsequences (formula : CNF Nat) (s : State) : Prop :=
+def ReasonConsequences (formula : Std.Sat.CNF Nat) (s : State) : Prop :=
   ∀ i, i < s.assigned → s.reason s.trail[i]! ≠ 0 →
     ∀ a, CNF.Sat a formula → PrefixCompatible s a i → Falsifies a s.trail[i]!
 
@@ -77,12 +77,12 @@ def RootReasons (s : State) : Prop :=
   ∀ i, i < s.forced → s.reason s.trail[i]! ≠ 0
 
 /-- Root assignments hold in every model of the input. -/
-def RootConsequences (formula : CNF Nat) (s : State) : Prop :=
+def RootConsequences (formula : Std.Sat.CNF Nat) (s : State) : Prop :=
   ∀ a, CNF.Sat a formula → PrefixCompatible s a s.forced
 
 /-- Acyclic reason dependencies and the absence of root decisions justify all
 root assignments. The induction follows the executable trail order. -/
-theorem rootConsequences_of_reasons {formula : CNF Nat} {s : State}
+theorem rootConsequences_of_reasons {formula : Std.Sat.CNF Nat} {s : State}
     (bounds : s.forced ≤ s.assigned) (root : RootReasons s)
     (reasons : ReasonConsequences formula s) : RootConsequences formula s := by
   intro a ha i hi
@@ -94,7 +94,7 @@ theorem rootConsequences_of_reasons {formula : CNF Nat} {s : State}
 
 /-- An entailed reason whose non-head literals are falsified by earlier trail
 assumptions supplies the corresponding reason dependency. -/
-theorem reason_consequence_of_clause {formula : CNF Nat} {s : State} {i : Nat}
+theorem reason_consequence_of_clause {formula : Std.Sat.CNF Nat} {s : State} {i : Nat}
     {reason : CNF.Clause Nat}
     (entailed : CNF.EntailsClause formula reason)
     (tail : ∀ a, CNF.Sat a formula → PrefixCompatible s a i →
@@ -107,7 +107,7 @@ theorem reason_consequence_of_clause {formula : CNF Nat} {s : State} {i : Nat}
 
 /-- The root-conflict return rule once the watch scan supplies a clause whose
 literals are false under the forced prefix. -/
-theorem unsat_of_root_clause {formula : CNF Nat} {s : State}
+theorem unsat_of_root_clause {formula : Std.Sat.CNF Nat} {s : State}
     {conflict : CNF.Clause Nat} (root : RootConsequences formula s)
     (entailed : CNF.EntailsClause formula conflict)
     (falseAtRoot : ∀ a, PrefixCompatible s a s.forced →

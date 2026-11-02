@@ -138,7 +138,7 @@ private theorem reasonDatabase_of_relocations {s : State} {original learned kept
   obtain ⟨_, _, relocated, member, _, id, _⟩ := relocations i oldBefore oldNonzero
   exact ⟨relocated, member, id⟩
 
-private theorem reasonGraph_of_relocations {formula : CNF Nat} {s : State}
+private theorem reasonGraph_of_relocations {formula : Std.Sat.CNF Nat} {s : State}
     {original learned kept : List StoredClause} {rank : Lit → Nat}
     (database : Database s original learned) (arrays : ArrayBounds s) (active : ActiveTrail s)
     (graph : ReasonGraph formula s s.assigned rank) (k : Nat)
@@ -169,7 +169,7 @@ private theorem reasonGraph_of_relocations {formula : CNF Nat} {s : State}
 /-- Actual root reduction preserves all active reason nodes and their DAG.
 Retention, ID relocation and literal equality are derived from the real
 locking/compaction loops, rather than assumed as output reason clauses. -/
-theorem reduceDB_reasons {formula : CNF Nat} {s : State} {original learned : List StoredClause}
+theorem reduceDB_reasons {formula : Std.Sat.CNF Nat} {s : State} {original learned : List StoredClause}
     {heads : Nat → List Nat} {rank : Lit → Nat}
     (database : Database s original learned) (meaning : DatabaseMeaning formula original learned)
     (certificate : WatchCertificate s (original ++ learned) heads)

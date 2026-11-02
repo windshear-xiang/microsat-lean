@@ -62,7 +62,7 @@ theorem analyze_reasons (s : State) (conflict : Nat) : (CDCL.analyze s conflict)
 theorem analyze_forced (s : State) (conflict : Nat) : (CDCL.analyze s conflict).1.forced = s.forced := by
   rw [analyze_eq_addClause, addClause_forced, analysisBeforeStore_forced]
 
-theorem analyze_assigned_lt {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem analyze_assigned_lt {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) :
     (CDCL.analyze s conflict).1.assigned < s.assigned := by
@@ -79,7 +79,7 @@ theorem analyze_assigned_lt {formula : CNF Nat} {s : State} {conflict decision :
   simp only [analysisBeforeStore, backjump_assigned]
   exact Nat.lt_of_le_of_lt cursor.2.1 upper
 
-theorem analyze_learned_nodup {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem analyze_learned_nodup {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) :
     (analysisLearned s conflict).toList.Nodup := by
@@ -92,7 +92,7 @@ theorem analyze_learned_nodup {formula : CNF Nat} {s : State} {conflict decision
   rw [facts.trail]
   exact entry.graph.ranks i (by omega)
 
-theorem analyze_learned_variables_nodup {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem analyze_learned_variables_nodup {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) :
     ((analysisLearned s conflict).toList.map Lit.var).Nodup := by
@@ -103,7 +103,7 @@ theorem analyze_learned_variables_nodup {formula : CNF Nat} {s : State} {conflic
 /-- Any actual output six tag is on an old root literal. Its falsity follows
 from the input root consequence, without assuming anything about output
 semantics or relying on satisfiability of the input CNF. -/
-theorem analyze_rootTagConsequences {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem analyze_rootTagConsequences {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) :
     RootTagConsequences formula (CDCL.analyze s conflict).1 (CDCL.analyze s conflict).1.assigned

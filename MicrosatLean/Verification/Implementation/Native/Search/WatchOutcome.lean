@@ -7,7 +7,7 @@ open CDCL Representation Propagation Analysis Std.Sat
 
 /-- Watch traversal returns a certified state with saved decision history or
 a semantically sound UNSAT answer. The watch phase has no SAT return. -/
-def WatchStateOutcome (formula : CNF Nat) : Progress → Prop
+def WatchStateOutcome (formula : Std.Sat.CNF Nat) : Progress → Prop
   | .running after => ∃ original learned heads rank,
       StateCertificate formula after.solver original learned heads rank ∧
       DecisionHistory after.solver (original ++ learned)
@@ -17,7 +17,7 @@ def WatchStateOutcome (formula : CNF Nat) : Progress → Prop
 /-- Complete actual watch traversal, including analyzer/assertion and the
 root UNSAT return. All clause and reason data in returned certificates are
 derived from the current genuine database and concrete source branches. -/
-theorem propagateWatches_outcome {formula : CNF Nat} (s : State)
+theorem propagateWatches_outcome {formula : Std.Sat.CNF Nat} (s : State)
     (decision oldLemmas : Nat) (root : Bool) (lit : Lit)
     (remaining : List Nat) (fuel : Nat) (arena first : Array Nat) (previous : Nat)
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
@@ -108,7 +108,7 @@ theorem propagateWatches_outcome {formula : CNF Nat} (s : State)
 
 /-- The actual public watch step enjoys the same result guarantee; finite
 proper links prove that its arena-sized traversal budget is sufficient. -/
-theorem step_watch_outcome {formula : CNF Nat} (s : State)
+theorem step_watch_outcome {formula : Std.Sat.CNF Nat} (s : State)
     (decision oldLemmas : Nat) (root : Bool) (lit : Lit) (previous : Nat)
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)

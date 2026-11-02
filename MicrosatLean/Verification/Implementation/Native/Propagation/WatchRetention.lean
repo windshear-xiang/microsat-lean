@@ -14,7 +14,7 @@ theorem clauseWatches_symm {heads : Nat → List Nat} {id first second : Nat}
 
 /-- Completing the temporary orientation without moving a watch preserves
 every list and its ownership certificate, including when the two literals swap. -/
-theorem retainWatch_certificate {s : State} {formula : CNF Nat}
+theorem retainWatch_certificate {s : State} {formula : Std.Sat.CNF Nat}
     {original learned : List StoredClause} {heads : Nat → List Nat}
     (database : Database s original learned) (meaning : DatabaseMeaning formula original learned)
     (certificate : WatchCertificate s (original ++ learned) heads)

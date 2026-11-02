@@ -7,7 +7,7 @@ namespace MicrosatLean.Verification.Implementation.Bridge
 the real initializer's empty-clause and conflicting-unit exits prove UNSAT. -/
 theorem concrete_initialization : InitializationCorrect := by
   intro formula valid config
-  have nativeValid : Native.WellFormed formula := valid
+  have nativeValid : MicrosatLean.Verification.WellFormed formula := valid
   obtain ⟨outcome, initialized, checked⟩ :=
     Native.Initialization.initState_outcome nativeValid config
   refine ⟨outcome, initialized, ?_⟩

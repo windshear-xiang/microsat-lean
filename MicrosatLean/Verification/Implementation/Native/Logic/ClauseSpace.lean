@@ -11,7 +11,7 @@ to the solver requires proving that learned clauses have bounded variables and
 that simultaneously retained clauses have distinct canonical representatives.
 -/
 
-abbrev Literals := List (Literal Nat)
+abbrev Literals := List (Std.Sat.Literal Nat)
 
 def Bounded (n : Nat) (clause : Literals) : Prop :=
   ∀ lit ∈ clause, 1 ≤ lit.1 ∧ lit.1 ≤ n
@@ -74,7 +74,7 @@ theorem canonicalize_mem_universe (n : Nat) (clause : Literals) :
       · exact List.mem_append_right _ (List.mem_append_right _ (List.mem_map.mpr ⟨_, ih, rfl⟩))
       · exact List.mem_append_right _ (List.mem_append_left _ (List.mem_map.mpr ⟨_, ih, rfl⟩))
 
-private theorem mem_canonicalize_succ {clause : Literals} {lit : Literal Nat}
+private theorem mem_canonicalize_succ {clause : Literals} {lit : Std.Sat.Literal Nat}
     (n : Nat) :
     lit ∈ canonicalize (n + 1) clause ↔
       (lit.1 = n + 1 ∧ selected clause (n + 1) = some lit.2) ∨
@@ -85,7 +85,7 @@ private theorem mem_canonicalize_succ {clause : Literals} {lit : Literal Nat}
   | some chosen => simp [canonicalize, hsel, Prod.mk.injEq, eq_comm]
 
 theorem mem_canonicalize {clause : Literals} (h : NoClash clause)
-    (n : Nat) (lit : Literal Nat) :
+    (n : Nat) (lit : Std.Sat.Literal Nat) :
     lit ∈ canonicalize n clause ↔ lit ∈ clause ∧ 1 ≤ lit.1 ∧ lit.1 ≤ n := by
   induction n with
   | zero => simp [canonicalize]; omega

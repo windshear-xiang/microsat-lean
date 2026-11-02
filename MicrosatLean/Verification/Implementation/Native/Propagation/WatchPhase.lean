@@ -32,7 +32,7 @@ theorem SettledWatchReturn.finish_prefix {after : Machine} {entries : List Store
 
 /-- The executable public watch phase restores its detached arrays before
 returning. The arena-length budget is sufficient for its real cursor. -/
-theorem step_watch_settled {formula : CNF Nat} (s : State)
+theorem step_watch_settled {formula : Std.Sat.CNF Nat} (s : State)
     (decision oldLemmas : Nat) (root : Bool) (lit : Lit) (previous : Nat)
     {original learned : List StoredClause} {heads : Nat → List Nat} {count : Nat}
     (database : Database s original learned) (meaning : DatabaseMeaning formula original learned)

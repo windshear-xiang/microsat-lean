@@ -17,7 +17,7 @@ def WatchCompleted (before : State) : Progress → Prop
     WatchCompleted (restoreWatchArrays s arena first) progress ↔ WatchCompleted s progress := by
   cases progress <;> rfl
 
-theorem propagateWatches_completes {formula : CNF Nat} (s : State)
+theorem propagateWatches_completes {formula : Std.Sat.CNF Nat} (s : State)
     (decision oldLemmas : Nat) (root : Bool) (lit : Lit)
     (remaining : List Nat) (fuel : Nat) (arena first : Array Nat) (previous : Nat)
     {original learned : List StoredClause} {heads : Nat → List Nat}
@@ -108,7 +108,7 @@ theorem propagateWatches_completes {formula : CNF Nat} (s : State)
 
 /-- The actual public-step budget suffices for every valid cursor, so a watch
 continuation after this call always records a new assignment. -/
-theorem propagateWatches_arena_completes {formula : CNF Nat} (s : State) (arena first : Array Nat)
+theorem propagateWatches_arena_completes {formula : Std.Sat.CNF Nat} (s : State) (arena first : Array Nat)
     (decision oldLemmas : Nat) (root : Bool) (lit : Lit) (previous : Nat) (remaining : List Nat)
     {original learned : List StoredClause} {heads : Nat → List Nat}
     (database : Database (restoreWatchArrays s arena first) original learned)

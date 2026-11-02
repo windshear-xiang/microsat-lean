@@ -1,4 +1,4 @@
-import MicrosatLean.Verification.Specification
+import MicrosatLean.Verification.Implementation.Representation.Types
 
 namespace MicrosatLean.Verification
 
@@ -53,11 +53,8 @@ def Conflict (a : LogicalState) (clause : Clause) : Prop :=
 def prefixLiterals (a : LogicalState) (count : Nat) : List Literal :=
   (a.trail.take count).map TrailEntry.literal
 
-structure StoredClause where
-  id : Nat
-  lits : Array Lit
+abbrev StoredClause := Implementation.Native.Representation.StoredClause
 
-def StoredClause.view (entry : StoredClause) : Clause := clauseView entry.lits
 
 structure RepresentationWitness where
   original : List StoredClause
@@ -68,47 +65,17 @@ structure RepresentationWitness where
 def RepresentationWitness.entries (w : RepresentationWitness) : List StoredClause :=
   w.original ++ w.learned
 
-structure ArrayBounds (s : CDCL.State) : Prop where
-  first : s.first.size = 2 * (s.nVars + 1)
-  marks : s.marks.size = 2 * (s.nVars + 1)
-  reasons : s.reasons.size = s.nVars + 1
-  phases : s.phases.size = s.nVars + 1
-  trail : s.trail.size = s.nVars + 1
-  previous : s.previous.size = s.nVars + 1
-  next : s.next.size = s.nVars + 1
+abbrev ArrayBounds := Implementation.Native.Representation.ArrayBounds
 
-structure PackedClause (s : CDCL.State) (entry : StoredClause) : Prop where
-  header : 4 ≤ entry.id
-  bound : entry.id + entry.lits.size < s.arena.size
-  literals : ∀ i, i < entry.lits.size → s.db (entry.id + i) = entry.lits[i]!
-  terminator : s.db (entry.id + entry.lits.size) = 0
-  declared : ∀ lit ∈ entry.lits, 0 < lit.var ∧ lit.var ≤ s.nVars
+abbrev PackedClause (s : CDCL.State) (entry : StoredClause) :=
+  Implementation.Native.Representation.PackedClause s entry.id entry.lits
 
-/-- Exact consecutive layout excludes arbitrary suffixes as clause IDs. -/
-def DatabaseFrom (s : CDCL.State) (start : Nat) : List StoredClause → Prop
-  | [] => start = s.arena.size
-  | entry :: rest => entry.id = start + 2 ∧ PackedClause s entry ∧
-      DatabaseFrom s (entry.id + entry.lits.size + 1) rest
+abbrev DatabaseFrom := Implementation.Native.Representation.DatabaseFrom
 
-structure WatchRepresentation (s : CDCL.State) (w : RepresentationWitness) : Prop where
-  lists : ∀ lit, (w.heads lit).Nodup ∧ s.first[lit]! = (w.heads lit).headD 0 ∧
-    ∀ i, i < (w.heads lit).length →
-      let ref := (w.heads lit).getD i 0
-      ref ≠ 0 ∧ CDCL.watchLinkPos ref < s.arena.size ∧
-        s.db (CDCL.watchLinkPos ref) = (w.heads lit).getD (i + 1) 0
-  genuine : ∀ lit ref, ref ∈ w.heads lit → ∃ entry ∈ w.entries,
-    CDCL.watchClause ref = entry.id ∧ 2 ≤ entry.lits.size
-  covered : ∀ entry ∈ w.entries, 2 ≤ entry.lits.size →
-    entry.lits[0]! ≠ entry.lits[1]! ∧
-    ((2 * entry.id ∈ w.heads entry.lits[0]! ∧ 2 * entry.id + 1 ∈ w.heads entry.lits[1]!) ∨
-     (2 * entry.id ∈ w.heads entry.lits[1]! ∧ 2 * entry.id + 1 ∈ w.heads entry.lits[0]!))
-  unique : ∀ lit other ref, ref ∈ w.heads lit → ref ∈ w.heads other → lit = other
+abbrev WatchRepresentation (s : CDCL.State) (w : RepresentationWitness) :=
+  Implementation.Native.Propagation.WatchCertificate s w.entries w.heads
 
-def OrderRepresentation (s : CDCL.State) (order : List Nat) : Prop :=
-  order.Nodup ∧ (∀ var, var ∈ order ↔ 0 < var ∧ var ≤ s.nVars) ∧
-  s.head = order.headD 0 ∧ ∀ i, i < order.length →
-    s.previous[order.getD i 0]! = order.getD (i + 1) 0 ∧
-    (0 < i → s.next[order.getD i 0]! = order.getD (i - 1) 0)
+abbrev OrderRepresentation := Implementation.Native.Representation.MTFOrder
 
 /-- Numeric storage and the logical state share this single witness. Array
 contents outside the active trail may be stale; they are not assignments. -/
@@ -119,8 +86,8 @@ structure Rep (m : CDCL.Machine) (a : LogicalState) (w : RepresentationWitness) 
   layout : DatabaseFrom m.solver 2 w.entries
   fixed : m.solver.fixed = 2 + (w.original.map fun e => e.lits.size + 3).sum
   count : m.solver.nLemmas = w.learned.length
-  original : a.original = w.original.map StoredClause.view
-  learned : a.learned = w.learned.map StoredClause.view
+  original : a.original = w.original.map Implementation.Native.Representation.StoredClause.view
+  learned : a.learned = w.learned.map Implementation.Native.Representation.StoredClause.view
   trailLength : a.trail.length = m.solver.assigned
   rootSize : a.rootSize = m.solver.forced
   cursors : m.solver.forced ≤ m.solver.processed ∧

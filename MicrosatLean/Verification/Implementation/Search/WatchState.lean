@@ -67,7 +67,7 @@ theorem clausePermutations_map (entries : List NEntry) (f : NEntry → NEntry)
   | nil => trivial
   | cons entry rest ih =>
     refine ⟨?_, ih⟩
-    simpa only [Native.Representation.StoredClause.view, Native.clauseView_literals, native_view_eq]
+    simpa only [Native.Representation.StoredClause.view, MicrosatLean.Verification.clauseView_literals]
       using ((Array.perm_iff_toList_perm.mp (perms entry)).map literalView).symm
 
 theorem watch_map_trace (input : CNF) (s : State) (original learned : List NEntry)

@@ -21,7 +21,7 @@ theorem unitClosed_toNative {m : CDCL.Machine} {a : LogicalState} {w : Represent
 theorem history_toNative {formula : Formula} {m : CDCL.Machine} {a : LogicalState}
     {w : RepresentationWitness} (certificate : Certificate formula m a w) :
     Native.Analysis.DecisionHistory m.solver
-      (w.original.map toNativeEntry ++ w.learned.map toNativeEntry) := by
+      (w.original ++ w.learned) := by
   apply Native.Analysis.DecisionHistory.of_closed
   intro decision lower before reason entry member
   obtain ⟨source, stored, rfl⟩ := native_entry_source member
@@ -37,7 +37,7 @@ theorem settledWatch_toNative {m : CDCL.Machine} {a : LogicalState} {w : Represe
     (represented : Rep m a w) {count lit ref : Nat} (bound : count ≤ m.solver.assigned)
     (settled : SettledWatch a w count lit ref) :
     Native.Propagation.SettledWatch m.solver
-      (w.original.map toNativeEntry ++ w.learned.map toNativeEntry) count lit ref := by
+      (w.original ++ w.learned) count lit ref := by
   intro entry member id
   obtain ⟨source, stored, rfl⟩ := native_entry_source member
   exact (trueBefore_iff represented bound (otherWatch source lit)).mp (settled source stored id)
@@ -45,7 +45,7 @@ theorem settledWatch_toNative {m : CDCL.Machine} {a : LogicalState} {w : Represe
 theorem settledPrefix_toNative {m : CDCL.Machine} {a : LogicalState} {w : RepresentationWitness}
     (represented : Rep m a w) {count : Nat} (bound : count ≤ m.solver.assigned)
     (settled : SettledPrefix a w count) : Native.Propagation.SettledPrefix m.solver
-      (w.original.map toNativeEntry ++ w.learned.map toNativeEntry) w.heads count := by
+      (w.original ++ w.learned) w.heads count := by
   intro lit falseLit ref watched
   apply settledWatch_toNative represented (Nat.le_refl _)
   simpa only [represented.trailLength] using
@@ -54,7 +54,7 @@ theorem settledPrefix_toNative {m : CDCL.Machine} {a : LogicalState} {w : Repres
 theorem settledCursor_toNative {m : CDCL.Machine} {a : LogicalState} {w : RepresentationWitness}
     (represented : Rep m a w) {lit : Lit} {remaining : List Nat}
     (settled : SettledCursor a w lit remaining) : Native.Propagation.SettledCursor m.solver
-      (w.original.map toNativeEntry ++ w.learned.map toNativeEntry) w.heads lit remaining := by
+      (w.original ++ w.learned) w.heads lit remaining := by
   intro ref watched visited
   apply settledWatch_toNative represented (Nat.le_refl _)
   simpa only [represented.trailLength] using settled ref watched visited
@@ -62,7 +62,7 @@ theorem settledCursor_toNative {m : CDCL.Machine} {a : LogicalState} {w : Repres
 theorem saved_toNative {formula : Formula} {m : CDCL.Machine} {a : LogicalState}
     {w : RepresentationWitness} (certificate : Certificate formula m a w) :
     Native.Analysis.DecisionWatchHistory m.solver
-      (w.original.map toNativeEntry ++ w.learned.map toNativeEntry) w.heads := by
+      (w.original ++ w.learned) w.heads := by
   intro decision lower before reason lit falseLit ref watched
   have represented := certificate.representation
   apply settledWatch_toNative represented (Nat.le_of_lt before)
@@ -75,7 +75,7 @@ theorem saved_toNative {formula : Formula} {m : CDCL.Machine} {a : LogicalState}
 theorem units_toNative {formula : Formula} {m : CDCL.Machine} {a : LogicalState}
     {w : RepresentationWitness} (certificate : Certificate formula m a w) :
     Native.Search.UnitTruth m.solver
-      (w.original.map toNativeEntry ++ w.learned.map toNativeEntry) := by
+      (w.original ++ w.learned) := by
   intro entry member single
   obtain ⟨source, stored, rfl⟩ := native_entry_source member
   have positive : 0 < source.lits.size := by change source.lits.size = 1 at single; omega
@@ -85,7 +85,7 @@ theorem units_toNative {formula : Formula} {m : CDCL.Machine} {a : LogicalState}
   have represented := certificate.representation
   apply (trueBefore_iff represented (Nat.le_refl _) source.lits[0]!).mp
   have truth := certificate.control.units source.view (stored_view_mem represented stored)
-    (by simpa only [StoredClause.view, clauseView_literals, List.length_map, Array.length_toList, toNativeEntry]
+    (by simpa only [Native.Representation.StoredClause.view, clauseView_literals, List.length_map, Array.length_toList]
       using single) _ firstMember
   simpa only [TrueBefore, prefixLiterals, ← represented.trailLength, List.take_length,
     LogicalState.trueTrail] using truth
@@ -157,11 +157,12 @@ theorem watchCursor_toNative {m : CDCL.Machine} {a : LogicalState} {w : Represen
   · subst previous
     exact .head remaining same.symm
   · have member : previous ∈ w.heads lit := by rw [same]; simp
-    obtain ⟨i, before, value⟩ := List.mem_iff_getElem.mp member
-    have nonzero := ((represented.watches.lists lit).2.2 i before).1
-    have index : (w.heads lit).getD i 0 = previous := by
-      simpa only [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem before, Option.getD_some] using value
-    rw [index] at nonzero
+    obtain ⟨entry, stored, id, _⟩ := represented.watches.references lit previous member
+    have lower := (represented.layout.packed stored).startLower
+    have nonzero : previous ≠ 0 := by
+      intro zero
+      simp only [zero, CDCL.watchClause, Nat.zero_div] at id
+      omega
     exact .after previous visited remaining nonzero same
 
 end MicrosatLean.Verification.Implementation.Bridge

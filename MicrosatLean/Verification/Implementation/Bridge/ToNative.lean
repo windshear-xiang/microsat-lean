@@ -10,7 +10,7 @@ reasons and cursors; no reachability or future preservation is assumed here.
 
 theorem phase_toNative {formula : Formula} {m : CDCL.Machine} {a : LogicalState}
     {w : RepresentationWitness} (certificate : Certificate formula m a w) :
-    Native.Search.PhaseInvariant m (w.original.map toNativeEntry ++ w.learned.map toNativeEntry)
+    Native.Search.PhaseInvariant m (w.original ++ w.learned)
       w.heads := by
   have represented := certificate.representation
   have phaseFacts := certificate.control.phase
@@ -46,8 +46,8 @@ theorem phase_toNative {formula : Formula} {m : CDCL.Machine} {a : LogicalState}
 
 theorem machineCertificate_toNative {formula : Formula} {m : CDCL.Machine} {a : LogicalState}
     {w : RepresentationWitness} (certificate : Certificate formula m a w) :
-    Native.Search.MachineCertificate formula m (w.original.map toNativeEntry)
-      (w.learned.map toNativeEntry) w.heads (trailRank m.solver) := by
+    Native.Search.MachineCertificate formula m (w.original)
+      (w.learned) w.heads (trailRank m.solver) := by
   refine ⟨stateCertificate_toNative certificate, ?_, history_toNative certificate,
     saved_toNative certificate, units_toNative certificate, ?_, phase_toNative certificate,
     certificate.control.oldCount⟩
@@ -60,7 +60,7 @@ theorem machineCertificate_toNative {formula : Formula} {m : CDCL.Machine} {a : 
 theorem native_of_certificate {formula : Formula} {m : CDCL.Machine} {a : LogicalState}
     {w : RepresentationWitness} (certificate : Certificate formula m a w) :
     Native.Search.MachineInvariant formula m :=
-  ⟨w.original.map toNativeEntry, w.learned.map toNativeEntry, w.heads,
+  ⟨w.original, w.learned, w.heads,
     trailRank m.solver, machineCertificate_toNative certificate⟩
 
 theorem native_of_inv {formula : Formula} {m : CDCL.Machine} (valid : Inv formula m) :

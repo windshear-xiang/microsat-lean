@@ -60,7 +60,7 @@ private theorem firstUIP_false_witness {s : State} {decision candidate : Nat}
     rw [isUIP] at notUIP
     contradiction
 
-private theorem resolutionBody_uip {formula : CNF Nat} {snapshot s : State} {count decision : Nat}
+private theorem resolutionBody_uip {formula : Std.Sat.CNF Nat} {snapshot s : State} {count decision : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (block : DecisionBlock snapshot decision count) (geometry : BlockGeometry snapshot s)
     (witness : BlockMark snapshot count decision s) (bound : s.assigned ≤ count) :
@@ -162,7 +162,7 @@ private theorem resolutionBody_uip {formula : CNF Nat} {snapshot s : State} {cou
       rw [unassign_mark_other different]
       exact markedK
 
-private theorem resolutionScan_uip {formula : CNF Nat} {snapshot : State} {count decision : Nat}
+private theorem resolutionScan_uip {formula : Std.Sat.CNF Nat} {snapshot : State} {count decision : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (block : DecisionBlock snapshot decision count) (fuel : Nat) (s : State)
     (geometry : BlockGeometry snapshot s) (witness : BlockMark snapshot count decision s)
@@ -185,7 +185,7 @@ private theorem resolutionScan_uip {formula : CNF Nat} {snapshot : State} {count
 /-- A real conflict with a MARK in its current nearest-decision interval
 reaches a MARKed first UIP. The actual early exits and finite loop budget are
 refined; exhaustion cannot occur while the interval retains a MARK. -/
-theorem resolveToUIP_marked_uip {formula : CNF Nat} {snapshot : State} {count decision : Nat}
+theorem resolveToUIP_marked_uip {formula : Std.Sat.CNF Nat} {snapshot : State} {count decision : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (block : DecisionBlock snapshot decision count) (s : State)
     (storage : ReasonStorage snapshot s) (trail : s.trail = snapshot.trail)
@@ -202,7 +202,7 @@ theorem resolveToUIP_marked_uip {formula : CNF Nat} {snapshot : State} {count de
 /-- The actual first minimizer call fails on the sole current-level UIP, so
 the actual learned array is nonempty and starts with that UIP. The proof uses
 the concrete level countermodel and the executable reset of `processed`. -/
-theorem buildLearned_retains_uip {formula : CNF Nat} {snapshot s : State} {count decision : Nat}
+theorem buildLearned_retains_uip {formula : Std.Sat.CNF Nat} {snapshot s : State} {count decision : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (storage : ReasonStorage snapshot s) (trail : s.trail = snapshot.trail)
     (parents : ReasonLevelParent snapshot count decision) (tags : ValidMarkTags snapshot count s)
@@ -225,7 +225,7 @@ theorem buildLearned_retains_uip {formula : CNF Nat} {snapshot s : State} {count
 /-- Resolution followed by recursive minimization retains the actual first
 UIP under concrete same-level reason-parent and preexisting-root-tag facts.
 The nonempty clause and retained head are conclusions, not entry premises. -/
-theorem resolveToUIP_retains_uip {formula : CNF Nat} {snapshot : State} {count decision : Nat}
+theorem resolveToUIP_retains_uip {formula : Std.Sat.CNF Nat} {snapshot : State} {count decision : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (block : DecisionBlock snapshot decision count) (parents : ReasonLevelParent snapshot count decision)
     (s : State) (storage : ReasonStorage snapshot s) (trail : s.trail = snapshot.trail)

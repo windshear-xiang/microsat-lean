@@ -6,7 +6,7 @@ namespace MicrosatLean.Verification.Implementation.Native.Search
 
 open CDCL Representation Propagation Analysis Std.Sat
 
-theorem StateCertificate.learnedCount_bound {formula : CNF Nat} {s : State}
+theorem StateCertificate.learnedCount_bound {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank) :
     s.nLemmas ≤ 3 ^ s.nVars :=
@@ -14,7 +14,7 @@ theorem StateCertificate.learnedCount_bound {formula : CNF Nat} {s : State}
 
 /-- The concrete phase-saving decision preserves all base data. The two
 unmarked tests supply freshness, trail capacity, and the new reason-free node. -/
-theorem StateCertificate.decide {formula : CNF Nat} {s : State}
+theorem StateCertificate.decide {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (var : Nat) (lower : 1 ≤ var) (upper : var ≤ s.nVars)
@@ -75,7 +75,7 @@ theorem StateCertificate.decide {formula : CNF Nat} {s : State}
 
 /-- The actual decision scan discharges both freshness tests and declaration
 bounds, so selecting a nonzero variable preserves the complete base certificate. -/
-theorem StateCertificate.nextDecision {formula : CNF Nat} {s : State}
+theorem StateCertificate.nextDecision {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank) (cursor : Nat)
     (valid : cursor = 0 ∨ (1 ≤ cursor ∧ cursor ≤ s.nVars))
@@ -95,7 +95,7 @@ theorem StateCertificate.nextDecision {formula : CNF Nat} {s : State}
 /-- A real unit append preserves the complete base certificate. The root
 flag additionally requires the semantic root consequence supplied by its
 propagation phase; ordinary nonroot appends have no such requirement. -/
-theorem StateCertificate.assign {formula : CNF Nat} {s : State}
+theorem StateCertificate.assign {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (entry : StoredClause) (member : entry ∈ original ++ learned)

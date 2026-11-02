@@ -6,7 +6,7 @@ namespace MicrosatLean.Verification.Implementation.Native.Analysis
 
 open CDCL Representation Std.Sat
 
-private theorem resolutionBody_mtf {formula : CNF Nat} {snapshot : State} {count : Nat}
+private theorem resolutionBody_mtf {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank) (s : State)
     (storage : ReasonStorage snapshot s) (trail : s.trail = snapshot.trail)
     (vars : s.nVars = snapshot.nVars) (arrays : ArrayBounds s) (order : MTFCoverage s)
@@ -41,7 +41,7 @@ private theorem resolutionBody_mtf {formula : CNF Nat} {snapshot : State} {count
       · exact markClause_mtf packedCurrent poppedArrays poppedOrder 1 (by omega)
     · exact poppedOrder
 
-private theorem resolutionScan_mtf {formula : CNF Nat} {snapshot : State} {count : Nat}
+private theorem resolutionScan_mtf {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank) (fuel : Nat) (s : State)
     (storage : ReasonStorage snapshot s) (trail : s.trail = snapshot.trail)
     (vars : s.nVars = snapshot.nVars) (arrays : ArrayBounds s) (order : MTFCoverage s)
@@ -66,7 +66,7 @@ private theorem resolutionScan_mtf {formula : CNF Nat} {snapshot : State} {count
 
 /-- Actual reason expansion preserves the concrete move-to-front permutation.
 Each bumped literal is supplied by a genuine bounded packed reason clause. -/
-theorem resolveToUIP_mtf {formula : CNF Nat} {snapshot : State} {count : Nat}
+theorem resolveToUIP_mtf {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank) (s : State)
     (storage : ReasonStorage snapshot s) (trail : s.trail = snapshot.trail)
     (vars : s.nVars = snapshot.nVars) (arrays : ArrayBounds s) (order : MTFCoverage s)
@@ -84,7 +84,7 @@ theorem LearnedFrame.mtf {before after : State} (frame : LearnedFrame before aft
 
 /-- The complete actual analyzer preserves the decision-order permutation,
 including all conflict/reason bumps before the asserting clause is allocated. -/
-theorem AnalysisEntry.analyze_mtf {formula : CNF Nat} {s : State} {conflict : Nat}
+theorem AnalysisEntry.analyze_mtf {formula : Std.Sat.CNF Nat} {s : State} {conflict : Nat}
     {lits : Array Lit} {rank : Lit → Nat} (entry : AnalysisEntry formula s conflict lits rank)
     (order : MTFCoverage s) : MTFCoverage (analyze s conflict).1 := by
   let marked := analysisMarked s conflict

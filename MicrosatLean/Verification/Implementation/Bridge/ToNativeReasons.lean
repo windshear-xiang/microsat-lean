@@ -25,7 +25,7 @@ theorem encoded_head {lits : Array Lit} {lit : Literal}
     · exact positive
     · have size : lits.size = 0 := by omega
       have words : lits = #[] := Array.eq_empty_of_size_eq_zero size
-      simp [words, clauseView_literals] at head
+      simp [words] at head
   refine ⟨positive, ?_⟩
   have first : (clauseView lits).literals.head? = some (literalView lits[0]!) := by
     simp [clauseView_literals, List.head?_eq_getElem?, positive]
@@ -44,12 +44,12 @@ theorem encoded_tail {lits : Array Lit} {j : Nat} (positive : 0 < j) (before : j
 
 theorem graph_toNative {formula : Formula} {m : CDCL.Machine} {a : LogicalState}
     {w : RepresentationWitness} (certificate : Certificate formula m a w) :
-    Native.Analysis.ReasonGraph (Native.formulaView formula) m.solver m.solver.assigned
+    Native.Analysis.ReasonGraph (MicrosatLean.Verification.formulaView formula) m.solver m.solver.assigned
       (trailRank m.solver) := by
   have represented := certificate.representation
   refine ⟨?_, fun i before => trailRank_at (distinct_toNative certificate) before,
     distinct_toNative certificate, ?_⟩
-  · rw [represented.arrays.trail]
+  · rw [represented.arrays.trailSize]
     have bounded := represented.cursors.2.2
     omega
   · intro i before nonzero
@@ -62,21 +62,20 @@ theorem graph_toNative {formula : Formula} {m : CDCL.Machine} {a : LogicalState}
       obtain ⟨entry, member, id, view⟩ := present
       have facts := certificate.semantic.reasons i active clause reason
       have head : (clauseView entry.lits).literals.head? = some a.trail[i]!.literal := by
-        simpa only [← view, StoredClause.view] using facts.2.1
+        simpa only [← view, Native.Representation.StoredClause.view] using facts.2.1
       obtain ⟨positive, first⟩ := encoded_head head
       have packed := (database_toNative represented).layout.packed
-        (by simpa only [RepresentationWitness.entries, List.map_append] using
-          List.mem_map.mpr ⟨entry, member, rfl⟩)
+        (by simpa only [RepresentationWitness.entries] using member)
       refine ⟨entry.lits, ?_, positive, ?_, ?_, ?_⟩
-      · simpa only [toNativeEntry, id] using packed
+      · simpa only [id] using packed
       · apply view_injective
         rw [literalView_negate]
         exact first.trans (represented.trail i before)
       · change Std.Sat.CNF.EntailsClause (formulaView formula) (clauseView entry.lits)
-        simpa only [← view, StoredClause.view] using facts.1
+        simpa only [← view, Native.Representation.StoredClause.view] using facts.1
       · intro j positiveJ beforeJ
         have tail := facts.2.2 (literalView entry.lits[j]!)
-          (by simpa only [← view, StoredClause.view] using encoded_tail positiveJ beforeJ)
+          (by simpa only [← view, Native.Representation.StoredClause.view] using encoded_tail positiveJ beforeJ)
         exact (falseBefore_iff represented (Nat.le_of_lt before) entry.lits[j]!).mp tail
 
 end MicrosatLean.Verification.Implementation.Bridge

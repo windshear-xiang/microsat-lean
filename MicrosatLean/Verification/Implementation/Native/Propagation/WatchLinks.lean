@@ -32,11 +32,6 @@ theorem storedWatchRef_link_bound {s : State} {original learned : List StoredCla
   unfold watchLinkPos
   omega
 
-/-- The pointer component of WatchList, separated from clause membership
-while literal cells are temporarily being reoriented by propagation. -/
-def WatchLinks (s : State) (lit : Lit) (refs : List Nat) : Prop :=
-  refs.Nodup ∧ s.first[lit]! = refs.headD 0 ∧
-    ∀ i, i < refs.length → s.db (watchLinkPos (refs.getD i 0)) = refs.getD (i + 1) 0
 
 theorem WatchList.links {s : State} {lit : Lit} {refs : List Nat}
     (list : WatchList s lit refs) : WatchLinks s lit refs :=

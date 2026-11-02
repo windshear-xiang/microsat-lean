@@ -56,14 +56,14 @@ theorem reason_none_iff {m : CDCL.Machine} {a : LogicalState} {w : Representatio
       obtain ⟨entry, member, id, _⟩ := present
       have stored := (database_toNative represented).layout.packed
         (by simpa only [RepresentationWitness.entries, List.map_append] using
-          List.mem_map.mpr ⟨entry, member, rfl⟩)
+          member)
       have lower : 4 ≤ entry.id := stored.startLower
       rw [zero] at id
       omega
 
 theorem reasonDatabase_toNative {m : CDCL.Machine} {a : LogicalState} {w : RepresentationWitness}
     (represented : Rep m a w) : Native.Representation.ReasonDatabase m.solver
-      ((w.original.map toNativeEntry) ++ (w.learned.map toNativeEntry)) := by
+      ((w.original) ++ (w.learned)) := by
   intro i before nonzero
   cases reason : a.trail[i]!.reason with
   | none => exact False.elim (nonzero ((reason_none_iff represented before).mp reason))
@@ -71,9 +71,9 @@ theorem reasonDatabase_toNative {m : CDCL.Machine} {a : LogicalState} {w : Repre
     have present := represented.reasons i before
     simp only [reason] at present
     obtain ⟨entry, member, id, _⟩ := present
-    exact ⟨toNativeEntry entry,
+    exact ⟨entry,
       by simpa only [RepresentationWitness.entries, List.map_append] using
-        List.mem_map.mpr ⟨entry, member, rfl⟩, id.symm⟩
+        member, id.symm⟩
 
 theorem normalized_toNative {formula : Formula} {m : CDCL.Machine} {a : LogicalState}
     {w : RepresentationWitness} (certificate : Certificate formula m a w)
@@ -83,12 +83,11 @@ theorem normalized_toNative {formula : Formula} {m : CDCL.Machine} {a : LogicalS
   have normalized := certificate.progress.normalized entry.view
     (stored_view_mem certificate.representation member)
   have vars : (Native.Analysis.viewedLiterals entry.lits).map Prod.fst |>.Nodup := by
-    simpa only [StoredClause.view, clauseView_literals, Native.Analysis.viewedLiterals,
-      native_view_eq]
+    simpa only [Native.Representation.StoredClause.view, clauseView_literals, Native.Analysis.viewedLiterals]
       using normalized.2
   constructor
   · apply nodup_of_map literalView
-    simpa only [StoredClause.view, clauseView_literals] using normalized.1
+    simpa only [Native.Representation.StoredClause.view, clauseView_literals] using normalized.1
   · exact Native.Logic.ClauseSpace.noClash_of_noDuplicateVariables vars
 
 theorem canonicalKey_congr (n : Nat) {left right : Clause}
@@ -109,15 +108,15 @@ theorem ownKey_of_nativeKey {variables : Nat} {entry : StoredClause}
   change lit ∈ Native.Logic.ClauseSpace.canonicalize variables _ ↔ lit ∈ entry.view
   rw [Native.Logic.ClauseSpace.canonicalize_coverage
     (Native.Analysis.viewedLiterals_bounded bounded) normalized]
-  simp only [StoredClause.view, ← Std.Sat.CNF.Clause.mem_literals_iff, clauseView_literals,
-    Native.Analysis.viewedLiterals, native_view_eq]
+  simp only [Native.Representation.StoredClause.view, ← Std.Sat.CNF.Clause.mem_literals_iff, clauseView_literals,
+    Native.Analysis.viewedLiterals]
 
 theorem learnedDistinct_toNative {formula : Formula} {m : CDCL.Machine} {a : LogicalState}
     {w : RepresentationWitness} (certificate : Certificate formula m a w) :
-    ((w.learned.map toNativeEntry).map fun entry =>
+    ((w.learned).map fun entry =>
       Native.Analysis.canonicalKey m.solver.nVars entry.lits).Nodup := by
   apply nodup_of_map (fun literals => canonicalKey m.solver.nVars (.ofLiterals literals))
-  have keys : ((w.learned.map toNativeEntry).map (fun entry =>
+  have keys : ((w.learned).map (fun entry =>
       Native.Analysis.canonicalKey m.solver.nVars entry.lits)).map
       (fun literals => canonicalKey m.solver.nVars (.ofLiterals literals)) =
       a.learned.map (canonicalKey a.numVars) := by
@@ -128,8 +127,8 @@ theorem learnedDistinct_toNative {formula : Formula} {m : CDCL.Machine} {a : Log
     have allMember : entry ∈ w.entries := List.mem_append_right _ member
     have packed := (database_toNative certificate.representation).layout.packed
       (by simpa only [RepresentationWitness.entries, List.map_append] using
-        List.mem_map.mpr ⟨entry, allMember, rfl⟩)
-    simpa only [Function.comp_def, toNativeEntry, certificate.representation.variables] using
+        allMember)
+    simpa only [Function.comp_def, certificate.representation.variables] using
       ownKey_of_nativeKey packed.wellFormed (normalized_toNative certificate allMember).2
   rw [keys]
   exact certificate.progress.distinctLearned
@@ -158,11 +157,11 @@ theorem nativeKey_of_ownKey {variables : Nat} {left right : StoredClause}
   apply Native.Logic.ClauseSpace.canonicalize_eq_of_relevant_mem_iff
   intro var bounded pol
   have noClashLeft : ∀ var, (var, true) ∈ left.view → (var, false) ∉ left.view := by
-    simpa only [StoredClause.view, ← Std.Sat.CNF.Clause.mem_literals_iff, clauseView_literals,
-      Native.Logic.ClauseSpace.NoClash, Native.Analysis.viewedLiterals, native_view_eq] using leftClash
+    simpa only [Native.Representation.StoredClause.view, ← Std.Sat.CNF.Clause.mem_literals_iff, clauseView_literals,
+      Native.Logic.ClauseSpace.NoClash, Native.Analysis.viewedLiterals] using leftClash
   have noClashRight : ∀ var, (var, true) ∈ right.view → (var, false) ∉ right.view := by
-    simpa only [StoredClause.view, ← Std.Sat.CNF.Clause.mem_literals_iff, clauseView_literals,
-      Native.Logic.ClauseSpace.NoClash, Native.Analysis.viewedLiterals, native_view_eq] using rightClash
+    simpa only [Native.Representation.StoredClause.view, ← Std.Sat.CNF.Clause.mem_literals_iff, clauseView_literals,
+      Native.Logic.ClauseSpace.NoClash, Native.Analysis.viewedLiterals] using rightClash
   have members : (var, pol) ∈ left.view ↔ (var, pol) ∈ right.view := by
     by_cases positive : 0 < var
     · have index : var - 1 < variables := by omega
@@ -192,7 +191,7 @@ theorem nativeKey_of_ownKey {variables : Nat} {left right : StoredClause}
         have positive := bound.1
         omega
       simp [absentLeft, absentRight]
-  simpa only [StoredClause.view, ← Std.Sat.CNF.Clause.mem_literals_iff, clauseView_literals,
-    Native.Analysis.viewedLiterals, native_view_eq] using members
+  simpa only [Native.Representation.StoredClause.view, ← Std.Sat.CNF.Clause.mem_literals_iff, clauseView_literals,
+    Native.Analysis.viewedLiterals] using members
 
 end MicrosatLean.Verification.Implementation.Bridge

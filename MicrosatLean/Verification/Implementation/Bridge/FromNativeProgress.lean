@@ -27,7 +27,7 @@ theorem native_progress {formula : Formula} {m : CDCL.Machine}
     rw [nativeState_database] at member
     obtain ⟨entry, stored, rfl⟩ := List.mem_map.mp member
     have unique : (Native.Analysis.viewedLiterals entry.lits).Nodup := by
-      apply List.Pairwise.map (R := fun left right : Lit => left ≠ right) Native.literalView
+      apply List.Pairwise.map (R := fun left right : Lit => left ≠ right) MicrosatLean.Verification.literalView
         (fun left right different same => different (Native.literalView_injective same))
       exact base.nodup entry stored
     have vars : ((Native.Analysis.viewedLiterals entry.lits).map Prod.fst).Nodup := by
@@ -37,9 +37,9 @@ theorem native_progress {formula : Formula} {m : CDCL.Machine}
       exact different (literal_eq_of_same_var (base.noClash entry stored) leftMember rightMember same)
     constructor
     · simpa only [Native.Representation.StoredClause.view, clauseView_literals,
-        Native.clauseView_literals, Native.Analysis.viewedLiterals, native_view_eq] using unique
+        MicrosatLean.Verification.clauseView_literals, Native.Analysis.viewedLiterals] using unique
     · simpa only [Native.Representation.StoredClause.view, clauseView_literals,
-        Native.clauseView_literals, Native.Analysis.viewedLiterals, native_view_eq] using vars
+        MicrosatLean.Verification.clauseView_literals, Native.Analysis.viewedLiterals] using vars
   · apply List.nodup_iff_eq_of_getElem_eq.mpr
     intro i j beforeI beforeJ same
     have activeI : i < learned.length := by simpa [nativeState] using beforeI
@@ -48,16 +48,16 @@ theorem native_progress {formula : Formula} {m : CDCL.Machine}
     let right := learned[j]'activeJ
     have leftMember : left ∈ original ++ learned := List.mem_append_right _ (List.getElem_mem activeI)
     have rightMember : right ∈ original ++ learned := List.mem_append_right _ (List.getElem_mem activeJ)
-    have ownEqual : canonicalKey m.solver.nVars (fromNativeEntry left).view =
-        canonicalKey m.solver.nVars (fromNativeEntry right).view := by
-      simpa only [nativeState, List.getElem_map, left, right, fromNativeEntry, StoredClause.view,
-        Native.Representation.StoredClause.view, Native.clauseView, clauseView, native_view_eq] using same
+    have ownEqual : canonicalKey m.solver.nVars left.view =
+        canonicalKey m.solver.nVars right.view := by
+      simpa only [nativeState, List.getElem_map, left, right, Native.Representation.StoredClause.view,
+        Native.Representation.StoredClause.view, MicrosatLean.Verification.clauseView, clauseView] using same
     have nativeEqual := nativeKey_of_ownKey
-      (left := fromNativeEntry left) (right := fromNativeEntry right)
+      (left := left) (right := right)
       (base.database.layout.packed leftMember).wellFormed (base.noClash left leftMember)
       (base.database.layout.packed rightMember).wellFormed (base.noClash right rightMember) ownEqual
     apply base.learnedDistinct.eq_of_getElem_eq
       (by simpa using activeI) (by simpa using activeJ)
-    simpa only [List.getElem_map, fromNativeEntry] using nativeEqual
+    simpa only [List.getElem_map] using nativeEqual
 
 end MicrosatLean.Verification.Implementation.Bridge

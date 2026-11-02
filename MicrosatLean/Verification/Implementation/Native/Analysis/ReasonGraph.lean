@@ -14,7 +14,7 @@ def TrailMember (snapshot : State) (count : Nat) (lit : Lit) : Prop :=
 /-- Concrete reason clauses form a DAG in the original trail order. Their
 head is the assigned true literal; every tail literal is an earlier false one.
 Entailment concerns the original input, not the current MARK assumptions. -/
-structure ReasonGraph (formula : CNF Nat) (snapshot : State) (count : Nat)
+structure ReasonGraph (formula : Std.Sat.CNF Nat) (snapshot : State) (count : Nat)
     (rank : Lit → Nat) : Prop where
   countBound : count ≤ snapshot.trail.size
   ranks : ∀ i, i < count → rank snapshot.trail[i]! = i
@@ -48,7 +48,7 @@ theorem ReasonStorage.reason {snapshot current : State} (storage : ReasonStorage
     (lit : Lit) : current.reason lit = snapshot.reason lit := by
   simp only [State.reason, storage.reasons]
 
-theorem ReasonGraph.clause_of_member {formula : CNF Nat} {snapshot : State} {count : Nat}
+theorem ReasonGraph.clause_of_member {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank) {lit : Lit}
     (member : TrailMember snapshot count lit) (nondecision : snapshot.reason lit ≠ 0) :
     ∃ lits, PackedClause snapshot (snapshot.reason lit) lits ∧
@@ -66,7 +66,7 @@ theorem ReasonGraph.clause_of_member {formula : CNF Nat} {snapshot : State} {cou
   rw [← equal, graph.ranks k beforeK, graph.ranks i before]
   exact earlierIndex
 
-theorem ReasonGraph.member_eq_of_rank {formula : CNF Nat} {snapshot : State} {count : Nat}
+theorem ReasonGraph.member_eq_of_rank {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank) {lit : Lit}
     (member : TrailMember snapshot count lit) {i : Nat}
     (position : rank lit = i) : lit = snapshot.trail[i]! := by
@@ -81,19 +81,19 @@ def EarlierLeavesFalse (rank : Lit → Nat) (leaves : Lit → Prop)
     (a : Nat → Bool) (bound : Nat) : Prop :=
   ∀ lit, leaves lit → rank lit < bound → Falsifies a lit
 
-def LeafConsequence (formula : CNF Nat) (rank : Lit → Nat) (leaves : Lit → Prop)
+def LeafConsequence (formula : Std.Sat.CNF Nat) (rank : Lit → Nat) (leaves : Lit → Prop)
     (bound : Nat) (lit : Lit) : Prop :=
   ∀ a, CNF.Sat a formula → EarlierLeavesFalse rank leaves a bound → Falsifies a lit
 
-abbrev DerivedLiteral (formula : CNF Nat) (rank : Lit → Nat) (leaves : Lit → Prop)
+abbrev DerivedLiteral (formula : Std.Sat.CNF Nat) (rank : Lit → Nat) (leaves : Lit → Prop)
     (lit : Lit) : Prop := LeafConsequence formula rank leaves (rank lit) lit
 
-theorem leafConsequence_of_leaf {formula : CNF Nat} {rank : Lit → Nat} {leaves : Lit → Prop}
+theorem leafConsequence_of_leaf {formula : Std.Sat.CNF Nat} {rank : Lit → Nat} {leaves : Lit → Prop}
     {bound : Nat} {lit : Lit} (leaf : leaves lit) (earlier : rank lit < bound) :
     LeafConsequence formula rank leaves bound lit :=
   fun _ _ assumptions => assumptions lit leaf earlier
 
-theorem LeafConsequence.mono {formula : CNF Nat} {rank : Lit → Nat} {leaves : Lit → Prop}
+theorem LeafConsequence.mono {formula : Std.Sat.CNF Nat} {rank : Lit → Nat} {leaves : Lit → Prop}
     {small large : Nat} {lit : Lit} (h : LeafConsequence formula rank leaves small lit)
     (bound : small ≤ large) : LeafConsequence formula rank leaves large lit := by
   intro a model assumptions
@@ -103,7 +103,7 @@ theorem LeafConsequence.mono {formula : CNF Nat} {rank : Lit → Nat} {leaves : 
 
 /-- Soundness of expanding one actual reason after its tails have been
 derived. The tail consequences will come from the concrete recursive scan. -/
-theorem derived_of_reason {formula : CNF Nat} {rank : Lit → Nat} {leaves : Lit → Prop}
+theorem derived_of_reason {formula : Std.Sat.CNF Nat} {rank : Lit → Nat} {leaves : Lit → Prop}
     {lit : Lit} {lits : Array Lit} (_nonempty : 0 < lits.size)
     (head : lits[0]! = lit.negate) (entailed : CNF.EntailsClause formula (clauseView lits))
     (tails : ∀ j, 0 < j → j < lits.size →
@@ -126,7 +126,7 @@ theorem derived_of_reason {formula : CNF Nat} {rank : Lit → Nat} {leaves : Lit
 
 /-- Tag 5 records only conservative failure. Tag 6 records an independently
 justified consequence of strictly earlier original leaves. -/
-structure ImpliedCache (formula : CNF Nat) (snapshot : State) (count : Nat)
+structure ImpliedCache (formula : Std.Sat.CNF Nat) (snapshot : State) (count : Nat)
     (rank : Lit → Nat) (leaves : Lit → Prop) (s : State) : Prop where
   tags : ∀ lit, TrailMember snapshot count lit →
     s.mark lit = 0 ∨ s.mark lit = 1 ∨ s.mark lit = 2 ∨ s.mark lit = 5 ∨ s.mark lit = 6
@@ -134,7 +134,7 @@ structure ImpliedCache (formula : CNF Nat) (snapshot : State) (count : Nat)
   cached : ∀ lit, TrailMember snapshot count lit → s.mark lit = 6 →
     DerivedLiteral formula rank leaves lit
 
-private theorem cache_setMark {formula : CNF Nat} {snapshot s : State} {count : Nat}
+private theorem cache_setMark {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     (cache : ImpliedCache formula snapshot count rank leaves s) (target value : Nat)
     (valueTag : value = 1 ∨ value = 5 ∨ value = 6)
@@ -165,19 +165,19 @@ private theorem cache_setMark {formula : CNF Nat} {snapshot s : State} {count : 
         exact cache.cached lit member tag
   · simpa [State.setMark, Array.setIfInBounds, inBounds] using cache
 
-theorem ImpliedCache.setMark_failed {formula : CNF Nat} {snapshot s : State} {count : Nat}
+theorem ImpliedCache.setMark_failed {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     (cache : ImpliedCache formula snapshot count rank leaves s) (lit : Lit) :
     ImpliedCache formula snapshot count rank leaves (s.setMark lit 5) :=
   cache_setMark cache lit 5 (Or.inr (Or.inl rfl)) (by intro impossible; contradiction)
 
-theorem ImpliedCache.setMark_one {formula : CNF Nat} {snapshot s : State} {count : Nat}
+theorem ImpliedCache.setMark_one {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     (cache : ImpliedCache formula snapshot count rank leaves s) (lit : Lit) :
     ImpliedCache formula snapshot count rank leaves (s.setMark lit 1) :=
   cache_setMark cache lit 1 (Or.inl rfl) (by intro impossible; contradiction)
 
-theorem ImpliedCache.setMark_implied {formula : CNF Nat} {snapshot s : State} {count : Nat}
+theorem ImpliedCache.setMark_implied {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     (cache : ImpliedCache formula snapshot count rank leaves s) {lit : Lit}
     (sound : DerivedLiteral formula rank leaves lit) :

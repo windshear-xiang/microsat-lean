@@ -7,7 +7,7 @@ open CDCL Representation Analysis Std.Sat
 
 /-- A false current watch cannot be the true head of an active reason.
 Consequently a retained active reason keeps its original literal order. -/
-theorem retainWatch_reasonGraph {s : State} {formula : CNF Nat} {rank : Lit → Nat}
+theorem retainWatch_reasonGraph {s : State} {formula : Std.Sat.CNF Nat} {rank : Lit → Nat}
     {original learned : List StoredClause} (database : Database s original learned)
     (graph : ReasonGraph formula s s.assigned rank) (active : ActiveTrail s)
     (proper : ReasonDatabase s (original ++ learned))

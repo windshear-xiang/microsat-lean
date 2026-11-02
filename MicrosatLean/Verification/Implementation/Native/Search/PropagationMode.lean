@@ -48,7 +48,7 @@ theorem PropagationMode.restoreWatchArrays {s : State} {root : Bool}
 /-- Actual singleton learning erases all nonroot levels before assigning its
 new root literal. Every other learned clause returns to a genuine nonroot
 level, with transient cache tags cleared by the actual minimization scan. -/
-theorem PropagationMode.analyze_assign {formula : CNF Nat} {s : State}
+theorem PropagationMode.analyze_assign {formula : Std.Sat.CNF Nat} {s : State}
     {conflict decision : Nat} {lits : Array Lit} {rank : Lit → Nat}
     (phase : NonrootPhase s) (entry : AnalysisTransitionEntry formula s conflict lits rank decision) :
     let result := CDCL.analyze s conflict

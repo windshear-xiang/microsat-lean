@@ -121,7 +121,7 @@ theorem native_unit_trace {input : CNF} {s : CDCL.State}
   have represented := native_rep (m := machine) base ordered
   have packed := base.database.layout.packed member
   apply native_assign_trace base.database base.arrays base.active base.distinct member nonempty head opposite
-  · simp only [Native.Representation.StoredClause.view, Native.clauseView_literals,
+  · simp only [Native.Representation.StoredClause.view, MicrosatLean.Verification.clauseView_literals,
       List.head?_eq_getElem?, List.getElem?_map, Array.getElem?_toList,
       Array.getElem?_eq_getElem nonempty, Option.map_some]
     rw [← getElem!_pos entry.lits 0 nonempty, ← packed.literals 0 nonempty]
@@ -139,7 +139,7 @@ theorem native_unit_trace {input : CNF} {s : CDCL.State}
     apply fresh i before
     exact variableEq.symm.trans same
   · intro lit contained
-    have words : entry.view.literals = entry.lits.toList.map literalView := Native.clauseView_literals _
+    have words : entry.view.literals = entry.lits.toList.map literalView := MicrosatLean.Verification.clauseView_literals _
     rw [words] at contained
     obtain ⟨j, beforeTail, value⟩ := List.mem_iff_getElem.mp contained
     have beforeWord : j + 1 < entry.lits.size := by

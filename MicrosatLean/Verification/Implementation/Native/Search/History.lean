@@ -21,7 +21,7 @@ theorem initState_some_history {formula : Formula} (wellFormed : WellFormed form
 /-- The propagation certificate's concrete completed-watch witnesses supply
 the closure predicate needed when appending the next decision. Establishing
 those witnesses through real traversal remains a separate phase obligation. -/
-theorem StateCertificate.propagationClosed {formula : CNF Nat} {s : State}
+theorem StateCertificate.propagationClosed {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (units : ∀ entry ∈ original ++ learned, entry.lits.size = 1 →
@@ -33,7 +33,7 @@ theorem StateCertificate.propagationClosed {formula : CNF Nat} {s : State}
 
 /-- The executable decision scan supplies freshness for the actual selected
 variable. Only genuine propagation closure must be supplied by that phase. -/
-theorem StateCertificate.decide_history {formula : CNF Nat} {s : State}
+theorem StateCertificate.decide_history {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (history : DecisionHistory s (original ++ learned))
@@ -49,7 +49,7 @@ theorem StateCertificate.decide_history {formula : CNF Nat} {s : State}
 
 /-- Base certificate data and maintained history discharge all clause-origin
 and canonical-space inputs of the actual analyzer's numeric learned bound. -/
-theorem StateCertificate.analyze_count_bound {formula : CNF Nat} {s : State}
+theorem StateCertificate.analyze_count_bound {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     {conflict decision : Nat} {lits : Array Lit}
     (certificate : StateCertificate formula s original learned heads rank)

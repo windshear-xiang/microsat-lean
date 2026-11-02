@@ -8,7 +8,7 @@ namespace MicrosatLean.Verification.Implementation.Native.Search
 open CDCL Representation Propagation Analysis Std.Sat
 
 /-- All phase facts share the returned state's genuine database and heads. -/
-structure WatchRunningFacts (formula : CNF Nat) (after : Machine)
+structure WatchRunningFacts (formula : Std.Sat.CNF Nat) (after : Machine)
     (original learned : List StoredClause) (heads : Nat → List Nat) (rank : Lit → Nat) : Prop where
   base : StateCertificate formula after.solver original learned heads rank
   history : DecisionHistory after.solver (original ++ learned)
@@ -24,14 +24,14 @@ structure WatchRunningFacts (formula : CNF Nat) (after : Machine)
         SettledCursor after.solver (original ++ learned) heads after.currentLit remaining ∧
         SettledPrefix after.solver (original ++ learned) heads (after.solver.processed - 1))
 
-def WatchRichOutcome (formula : CNF Nat) : Progress → Prop
+def WatchRichOutcome (formula : Std.Sat.CNF Nat) : Progress → Prop
   | .running after => ∃ original learned heads rank, WatchRunningFacts formula after original learned heads rank
   | .finished (.unsat _) => CNF.Unsat formula
   | .finished (.sat _ _) => False
 
 /-- Actual conflict learning recovers completed and saved watch prefixes,
 unit truth, and the new propagation mode in the same returned ghost package. -/
-theorem WatchScanFacts.conflict {formula : CNF Nat} {s : State}
+theorem WatchScanFacts.conflict {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     {count : Nat} {lit : Lit} {previous ref : Nat} {rest : List Nat}
     (facts : WatchScanFacts formula s original learned heads rank count lit previous (ref :: rest))

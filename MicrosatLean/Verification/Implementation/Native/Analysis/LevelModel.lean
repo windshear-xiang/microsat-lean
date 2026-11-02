@@ -23,7 +23,7 @@ noncomputable def blockAssignment (snapshot : State) (count decision : Nat) (var
     if decision ≤ i then (literalView snapshot.trail[i]!).2 else !(literalView snapshot.trail[i]!).2
   else false
 
-theorem blockAssignment_at {formula : CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
+theorem blockAssignment_at {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (decision i : Nat) (before : i < count) :
     blockAssignment snapshot count decision snapshot.trail[i]!.var =
       if decision ≤ i then (literalView snapshot.trail[i]!).2 else !(literalView snapshot.trail[i]!).2 := by
@@ -34,7 +34,7 @@ theorem blockAssignment_at {formula : CNF Nat} {snapshot : State} {count : Nat} 
   simp only [blockAssignment, dite_eq_left found]
   rw [equal]
 
-theorem blockAssignment_true {formula : CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
+theorem blockAssignment_true {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (decision i : Nat) (before : i < count)
     (current : decision ≤ i) :
     blockAssignment snapshot count decision (literalView snapshot.trail[i]!).1 =
@@ -42,14 +42,14 @@ theorem blockAssignment_true {formula : CNF Nat} {snapshot : State} {count : Nat
   change blockAssignment snapshot count decision snapshot.trail[i]!.var = _
   rw [blockAssignment_at graph decision i before, ite_eq_left current]
 
-theorem blockAssignment_false {formula : CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
+theorem blockAssignment_false {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (decision i : Nat) (before : i < count)
     (earlier : i < decision) : Falsifies (blockAssignment snapshot count decision) snapshot.trail[i]! := by
   change blockAssignment snapshot count decision snapshot.trail[i]!.var ≠ (literalView snapshot.trail[i]!).2
   rw [blockAssignment_at graph decision i before, ite_eq_right (by omega)]
   cases (literalView snapshot.trail[i]!).2 <;> decide
 
-noncomputable def reasonWords {formula : CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
+noncomputable def reasonWords {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (i : Nat) : Array Lit := by
   classical
   exact if before : i < count then
@@ -58,7 +58,7 @@ noncomputable def reasonWords {formula : CNF Nat} {snapshot : State} {count : Na
     else #[]
   else #[]
 
-theorem reasonWords_spec {formula : CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
+theorem reasonWords_spec {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (i : Nat) (before : i < count)
     (propagated : snapshot.reason snapshot.trail[i]! ≠ 0) :
     let lits := reasonWords graph i
@@ -70,7 +70,7 @@ theorem reasonWords_spec {formula : CNF Nat} {snapshot : State} {count : Nat} {r
   simpa only [reasonWords, dite_eq_left before, dite_eq_left propagated] using
     Classical.choose_spec (graph.clauses i before propagated)
 
-private noncomputable def reasonViews {formula : CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
+private noncomputable def reasonViews {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) : List (CNF.Clause Nat) := by
   classical
   exact (List.range count).filterMap fun i =>
@@ -82,11 +82,11 @@ private def rootViews (snapshot : State) (count : Nat) (s : State) : List (CNF.C
 
 /-- The concrete proof-only CNF contains all actual reason clauses and a unit
 for every initial tag-six entry. It is independent of the input's models. -/
-noncomputable def explanationFormula {formula : CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
-    (graph : ReasonGraph formula snapshot count rank) (s : State) : CNF Nat :=
+noncomputable def explanationFormula {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
+    (graph : ReasonGraph formula snapshot count rank) (s : State) : Std.Sat.CNF Nat :=
   ⟨(reasonViews graph ++ rootViews snapshot count s).toArray⟩
 
-private theorem reason_mem {formula : CNF Nat} {snapshot s : State} {count : Nat} {rank : Lit → Nat}
+private theorem reason_mem {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (i : Nat) (before : i < count)
     (propagated : snapshot.reason snapshot.trail[i]! ≠ 0) :
     clauseView (reasonWords graph i) ∈ explanationFormula graph s := by
@@ -96,7 +96,7 @@ private theorem reason_mem {formula : CNF Nat} {snapshot s : State} {count : Nat
   apply List.mem_filterMap.mpr
   exact ⟨i, List.mem_range.mpr before, by simp only [ite_eq_left propagated]⟩
 
-private theorem root_mem {formula : CNF Nat} {snapshot s : State} {count : Nat} {rank : Lit → Nat}
+private theorem root_mem {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (i : Nat) (before : i < count)
     (six : s.mark snapshot.trail[i]! = 6) :
     clauseView #[snapshot.trail[i]!.negate] ∈ explanationFormula graph s := by
@@ -115,7 +115,7 @@ private theorem unit_negate_false {a : Nat → Bool} {lit : Lit}
   have falseLit := (falsifies_negate_iff a lit.negate).mpr head
   simpa only [negate_negate] using falseLit
 
-private theorem assignment_sat_reason {formula : CNF Nat} {snapshot : State} {count decision : Nat}
+private theorem assignment_sat_reason {formula : Std.Sat.CNF Nat} {snapshot : State} {count decision : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (parents : ReasonLevelParent snapshot count decision) (i : Nat) (before : i < count)
     (propagated : snapshot.reason snapshot.trail[i]! ≠ 0) :
@@ -136,7 +136,7 @@ private theorem assignment_sat_reason {formula : CNF Nat} {snapshot : State} {co
     refine ⟨(reasonWords graph i)[j]!, ?_, congrArg literalView equal.symm⟩
     simpa only [getElem!_pos (reasonWords graph i) j bound] using Array.getElem_mem bound
 
-theorem explanationFormula_sat {formula : CNF Nat} {snapshot s : State} {count decision : Nat}
+theorem explanationFormula_sat {formula : Std.Sat.CNF Nat} {snapshot s : State} {count decision : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (parents : ReasonLevelParent snapshot count decision)
     (rootEarlier : ∀ i, i < count → s.mark snapshot.trail[i]! = 6 → i < decision) :
@@ -167,7 +167,7 @@ theorem explanationFormula_sat {formula : CNF Nat} {snapshot s : State} {count d
       exact clauseView_mem.mpr ⟨_, by simp, rfl⟩
     · simp only [beq_iff_eq, six, ↓reduceIte, reduceCtorEq] at entry
 
-theorem explanationFormula_graph {formula : CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
+theorem explanationFormula_graph {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (s : State) :
     ReasonGraph (explanationFormula graph s) snapshot count rank := by
   refine ⟨graph.countBound, graph.ranks, graph.distinctVariables, ?_⟩
@@ -176,7 +176,7 @@ theorem explanationFormula_graph {formula : CNF Nat} {snapshot : State} {count :
   exact ⟨reasonWords graph i, spec.1, spec.2.1, spec.2.2.1,
     fun _ model => CNF.sat_of_mem model (reason_mem graph i before propagated), spec.2.2.2.2⟩
 
-theorem explanationFormula_cache {formula : CNF Nat} {snapshot s : State} {count : Nat} {rank : Lit → Nat}
+theorem explanationFormula_cache {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (tags : ValidMarkTags snapshot count s) :
     ImpliedCache (explanationFormula graph s) snapshot count rank
       (fun lit => TrailMember snapshot count lit ∧ s.mark lit = 2) s := by
@@ -191,7 +191,7 @@ theorem explanationFormula_cache {formula : CNF Nat} {snapshot s : State} {count
 minimizer. The concrete synthetic CNF has a proved model in which that UIP is
 true while all its strictly earlier original MARK assumptions are false.
 No satisfiability assumption about the original input is used. -/
-theorem implied_false_of_level_parent {formula : CNF Nat} {snapshot s : State}
+theorem implied_false_of_level_parent {formula : Std.Sat.CNF Nat} {snapshot s : State}
     {count decision candidate : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (storage : ReasonStorage snapshot s)
     (parents : ReasonLevelParent snapshot count decision) (tags : ValidMarkTags snapshot count s)

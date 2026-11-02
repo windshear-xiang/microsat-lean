@@ -10,15 +10,15 @@ open Std.Sat
 
 /-- Every marked false literal follows unconditionally from the input CNF.
 This property concerns initialization, where no decisions have been made. -/
-def RootMarks (formula : CNF Nat) (s : State) : Prop :=
+def RootMarks (formula : Std.Sat.CNF Nat) (s : State) : Prop :=
   ∀ lit, s.mark lit ≠ 0 → ∀ a, CNF.Sat a formula → Falsifies a lit
 
-theorem RootMarks.addClause {formula : CNF Nat} {s : State}
+theorem RootMarks.addClause {formula : Std.Sat.CNF Nat} {s : State}
     (h : RootMarks formula s) (lits : Array Lit) (original : Bool) :
     RootMarks formula (s.addClause lits original).1 := by
   simpa only [RootMarks, State.mark, addClause_marks] using h
 
-theorem RootMarks.assign {formula : CNF Nat} {s : State} {clauseId : Nat}
+theorem RootMarks.assign {formula : Std.Sat.CNF Nat} {s : State} {clauseId : Nat}
     (h : RootMarks formula s)
     (hHead : ∀ a, CNF.Sat a formula →
       a (literalView (s.db clauseId)).1 = (literalView (s.db clauseId)).2) :
@@ -31,7 +31,7 @@ theorem RootMarks.assign {formula : CNF Nat} {s : State} {clauseId : Nat}
       simpa only [assign_mark_other same] using marked
     exact h lit old a model
 
-theorem emptyState_rootMarks (numVars : Nat) (config : Config) (formula : CNF Nat) :
+theorem emptyState_rootMarks (numVars : Nat) (config : Config) (formula : Std.Sat.CNF Nat) :
     RootMarks formula (emptyState numVars config) := by
   intro lit marked
   exact False.elim (marked (emptyState_mark numVars config lit))

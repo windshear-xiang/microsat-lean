@@ -36,7 +36,7 @@ namespace MicrosatLean.Verification.Implementation.Native.Search
 
 open CDCL Representation Propagation Analysis Reduction Std.Sat
 
-private theorem rebuild_saved {formula : CNF Nat} {s : State}
+private theorem rebuild_saved {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads newHeads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (next : StateCertificate formula s original learned newHeads rank)
@@ -47,7 +47,7 @@ private theorem rebuild_saved {formula : CNF Nat} {s : State}
     (fun entry member => ⟨entry, member, rfl⟩) (PrefixLiterals.refl s decision)
     (saved decision lower before reason)
 
-private theorem sameState_settlement {formula : CNF Nat} {s : State}
+private theorem sameState_settlement {formula : Std.Sat.CNF Nat} {s : State}
     {original learned nextLearned : List StoredClause} {heads newHeads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (next : StateCertificate formula s original nextLearned newHeads rank)
@@ -84,7 +84,7 @@ private theorem restart_config_same (s : State) : s.restart.config = s.config :=
 
 /-- All evidence at the completed prepared choice boundary shares the same
 actual original/retained database and rebuilt linked watch heads. -/
-structure PreparedChoiceSettlement (formula : CNF Nat) (s : State)
+structure PreparedChoiceSettlement (formula : Std.Sat.CNF Nat) (s : State)
     (original learned : List StoredClause) (heads : Nat → List Nat) (rank : Lit → Nat) : Prop where
   certificate : StateCertificate formula s original learned heads rank
   history : DecisionHistory s (original ++ learned)
@@ -95,7 +95,7 @@ structure PreparedChoiceSettlement (formula : CNF Nat) (s : State)
   settled : SettledWatches s (original ++ learned) heads s.assigned
   units : ∀ entry ∈ original ++ learned, entry.lits.size = 1 → TrueBefore s s.assigned entry.lits[0]!
 
-theorem StateCertificate.prepareChoice_settlement {formula : CNF Nat} {s : State}
+theorem StateCertificate.prepareChoice_settlement {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (history : DecisionHistory s (original ++ learned)) (levels : LevelCover s) (six : SixBefore s)

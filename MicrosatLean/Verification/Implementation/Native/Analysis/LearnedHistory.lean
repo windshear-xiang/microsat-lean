@@ -8,7 +8,7 @@ open CDCL Representation Std.Sat
 /-- The real learned birth is unit-closed at every decision retained by its
 CDCL.backjump. A multiple-literal clause has two variables absent at that older
 prefix. A singleton has no retained nonroot decision at all. -/
-theorem buildLearned_birth_closed {formula : CNF Nat} {snapshot s : State}
+theorem buildLearned_birth_closed {formula : Std.Sat.CNF Nat} {snapshot s : State}
     {count currentDecision : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (storage : ReasonStorage snapshot s)
     (trail : s.trail = snapshot.trail) (parents : ReasonLevelParent snapshot count currentDecision)
@@ -49,7 +49,7 @@ theorem buildLearned_birth_closed {formula : CNF Nat} {snapshot s : State}
 /-- Actual minimization and CDCL.backjump preserve old records and insert the new
 clause's concrete birth evidence. The identifier is immaterial to prefix
 closure, and may already be the actual future arena identifier. -/
-theorem DecisionHistory.buildLearned_birth {formula : CNF Nat} {snapshot s : State}
+theorem DecisionHistory.buildLearned_birth {formula : Std.Sat.CNF Nat} {snapshot s : State}
     {count currentDecision : Nat} {rank : Lit → Nat} {entries : List StoredClause}
     (history : DecisionHistory s entries)
     (graph : ReasonGraph formula snapshot count rank) (storage : ReasonStorage snapshot s)
@@ -90,7 +90,7 @@ structure HistoryResolved (before resolved : State) (decision : Nat) : Prop wher
   uip : UIPResult before before.assigned decision resolved
   rootEarlier : ∀ i, i < before.assigned → resolved.mark before.trail[i]! = 6 → i < decision
 
-theorem DecisionAnalysisEntry.historyResolved {formula : CNF Nat} {s : State}
+theorem DecisionAnalysisEntry.historyResolved {formula : Std.Sat.CNF Nat} {s : State}
     {conflict decision : Nat} {lits : Array Lit} {rank : Lit → Nat}
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) :
     HistoryResolved s (analysisResolved s conflict) decision := by
@@ -133,7 +133,7 @@ theorem DecisionAnalysisEntry.historyResolved {formula : CNF Nat} {s : State}
 /-- Full actual analysis preserves decision history while extending it with
 the actual learned clause. Unit closure of the new entry is derived from its
 birth; it is not an outer analysis assumption. -/
-theorem DecisionHistory.analyze {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem DecisionHistory.analyze {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat} {entries : List StoredClause}
     (history : DecisionHistory s entries)
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) :
@@ -167,7 +167,7 @@ theorem DecisionHistory.analyze {formula : CNF Nat} {s : State} {conflict decisi
   rw [analyze_eq_addClause]
   exact DecisionHistory.addClause beforeHistory _ _
 
-theorem AnalysisTransitionEntry.decisionEntry {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem AnalysisTransitionEntry.decisionEntry {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : AnalysisTransitionEntry formula s conflict lits rank decision) :
     DecisionAnalysisEntry formula s conflict lits rank decision := by
@@ -177,7 +177,7 @@ theorem AnalysisTransitionEntry.decisionEntry {formula : CNF Nat} {s : State} {c
 
 /-- Saved concrete prefixes discharge the clause-origin premise of actual
 learned freshness. No origin or freshness conclusion is assumed separately. -/
-theorem DecisionHistory.analyze_fresh {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem DecisionHistory.analyze_fresh {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat} {entries : List StoredClause}
     (history : DecisionHistory s entries)
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) :
@@ -187,7 +187,7 @@ theorem DecisionHistory.analyze_fresh {formula : CNF Nat} {s : State} {conflict 
 
 /-- The actual counter bound now follows from maintained prefix history,
 the genuine database layout, and normalization of existing clauses. -/
-theorem DecisionHistory.analyze_count_bound {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem DecisionHistory.analyze_count_bound {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat} {original learned : List StoredClause}
     (history : DecisionHistory s (original ++ learned))
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision)
@@ -200,7 +200,7 @@ theorem DecisionHistory.analyze_count_bound {formula : CNF Nat} {s : State} {con
 
 /-- The actual subsequent asserting assignment also preserves history. Its
 fresh head and proper reason are supplied by the checked actual transition. -/
-theorem DecisionHistory.analyze_assign {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem DecisionHistory.analyze_assign {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat} {entries : List StoredClause}
     (history : DecisionHistory s entries)
     (entry : AnalysisTransitionEntry formula s conflict lits rank decision) (root : Bool) :

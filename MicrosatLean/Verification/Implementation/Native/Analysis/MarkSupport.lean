@@ -146,7 +146,7 @@ private theorem support_scan_post {snapshot : State} {count : Nat}
 
 /-- For a concrete reason DAG, the actual recursive minimizer only tags its
 snapshot's false literals and preserves every existing nonzero mark. -/
-theorem implied_markSupport {formula : CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
+theorem implied_markSupport {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (fuel : Nat) (s : State) (lit : Lit)
     (storage : ReasonStorage snapshot s) (member : TrailMember snapshot count lit) :
     MarkSupport (TrailMember snapshot count) s (implied fuel s lit).1 := by

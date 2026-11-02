@@ -6,7 +6,7 @@ open CDCL Representation Propagation Analysis Reduction Std.Sat
 
 /-- Restart keeps exactly the forced trail prefix. Its concrete clearing
 loop preserves every root mark and clears every discarded active mark. -/
-theorem StateCertificate.restart {formula : CNF Nat} {s : State}
+theorem StateCertificate.restart {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank) :
     StateCertificate formula s.restart original learned heads rank := by
@@ -37,7 +37,7 @@ theorem StateCertificate.restart {formula : CNF Nat} {s : State}
     rw [restart_trail, restart_mark_root certificate.bounds certificate.distinct i before]
     exact certificate.rootPrefix i before
 
-theorem HasStateCertificate.restart {formula : CNF Nat} {s : State}
+theorem HasStateCertificate.restart {formula : Std.Sat.CNF Nat} {s : State}
     (certificate : HasStateCertificate formula s) : HasStateCertificate formula s.restart := by
   obtain ⟨original, learned, heads, rank, certificate⟩ := certificate
   exact ⟨original, learned, heads, rank, certificate.restart⟩
@@ -48,13 +48,13 @@ theorem restart_root {s : State} (bounds : TrailBounds s) :
 
 /-- The actual restart followed by reduction has the complete certificate;
 the root-only condition for retaining all active reasons is derived here. -/
-theorem StateCertificate.restart_reduceDB {formula : CNF Nat} {s : State}
+theorem StateCertificate.restart_reduceDB {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank) (k : Nat) :
     ∃ kept newHeads, StateCertificate formula (s.restart.reduceDB k) original kept newHeads rank :=
   certificate.restart.reduceDB (restart_root certificate.bounds) k
 
-theorem HasStateCertificate.restart_reduceDB {formula : CNF Nat} {s : State}
+theorem HasStateCertificate.restart_reduceDB {formula : Std.Sat.CNF Nat} {s : State}
     (certificate : HasStateCertificate formula s) (k : Nat) :
     HasStateCertificate formula (s.restart.reduceDB k) := by
   obtain ⟨original, learned, heads, rank, certificate⟩ := certificate

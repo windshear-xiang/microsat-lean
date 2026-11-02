@@ -30,7 +30,7 @@ theorem decisionWatchHistory_move {s : State} {original learned : List StoredCla
   exact settledWatches_move database certificate active member current id wide falseLit unmarked
     (Nat.le_of_lt before) (history decision lower before reason) offset first arena firstHeads
 
-theorem StateCertificate.moveWatch_saved {formula : CNF Nat} {s : State}
+theorem StateCertificate.moveWatch_saved {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     {lit : Lit} {previous ref pos : Nat} {rest : List Nat}
@@ -72,7 +72,7 @@ theorem StateCertificate.moveWatch_saved {formula : CNF Nat} {s : State}
     certificate.active member cursor.member id wide falseLit unmarked history offset (s.db entry.id == lit)
     (movedWatchArrays s.arena s.first lit ref previous pos).1 (movedWatchArrays s.arena s.first lit ref previous pos).2
 
-theorem StateCertificate.retainWatch_saved {formula : CNF Nat} {s : State}
+theorem StateCertificate.retainWatch_saved {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     {lit : Lit} {ref : Nat} (current : ref ∈ heads lit) (falseLit : s.mark lit ≠ 0) :
@@ -95,7 +95,7 @@ theorem StateCertificate.retainWatch_saved {formula : CNF Nat} {s : State}
   simpa only [List.map_append, id] using decisionWatchHistory_retain certificate.database certificate.watches
     member history (s.db entry.id == lit) (Propagation.retainWatch s.arena (watchClause ref) lit)
 
-theorem StateCertificate.assign_watchSaved {formula : CNF Nat} {s : State}
+theorem StateCertificate.assign_watchSaved {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (history : DecisionWatchHistory s (original ++ learned) heads)
@@ -116,7 +116,7 @@ theorem StateCertificate.assign_watchSaved {formula : CNF Nat} {s : State}
   · exact (certificate.arrays.variable_index literal.2).1
   · exact freshVariable_of_unmarked_literal certificate.active head opposite
 
-theorem StateCertificate.watchUnit_saved {formula : CNF Nat} {s : State}
+theorem StateCertificate.watchUnit_saved {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     {lit : Lit} {ref : Nat} (current : ref ∈ heads lit) (falseLit : s.mark lit ≠ 0)

@@ -61,7 +61,7 @@ theorem decide_reason_prefix {s : State} {var i : Nat}
 /-- Actual propagation appends a fresh reason node whose non-head literals
 already occur on the active trail. Capacity follows from the old graph's
 distinct variables; it is not assumed for the output write. -/
-theorem ReasonGraph.assign_of_fresh {formula : CNF Nat} {s : State} {rank : Lit → Nat}
+theorem ReasonGraph.assign_of_fresh {formula : Std.Sat.CNF Nat} {s : State} {rank : Lit → Nat}
     (graph : ReasonGraph formula s s.assigned rank) (arrays : ArrayBounds s)
     (active : ActiveTrail s) {id : Nat} {lits : Array Lit}
     (packed : PackedClause s id lits) (nonempty : 0 < lits.size)
@@ -116,7 +116,7 @@ theorem ReasonGraph.assign_of_fresh {formula : CNF Nat} {s : State} {rank : Lit 
       exact ⟨k, beforeK, (assign_trail_prefix (Nat.lt_trans beforeK earlier)).trans equal⟩
 
 /-- The actual unassigned mark test supplies the fresh node required above. -/
-theorem ReasonGraph.assign {formula : CNF Nat} {s : State} {rank : Lit → Nat}
+theorem ReasonGraph.assign {formula : Std.Sat.CNF Nat} {s : State} {rank : Lit → Nat}
     (graph : ReasonGraph formula s s.assigned rank) (arrays : ArrayBounds s)
     (active : ActiveTrail s) {id : Nat} {lits : Array Lit}
     (packed : PackedClause s id lits) (nonempty : 0 < lits.size)
@@ -131,7 +131,7 @@ theorem ReasonGraph.assign {formula : CNF Nat} {s : State} {rank : Lit → Nat}
 
 /-- A decision appends a rank but has reason zero; all older graph edges and
 their concrete packed clauses are retained by the real array updates. -/
-theorem ReasonGraph.decide_of_fresh {formula : CNF Nat} {s : State} {rank : Lit → Nat}
+theorem ReasonGraph.decide_of_fresh {formula : Std.Sat.CNF Nat} {s : State} {rank : Lit → Nat}
     (graph : ReasonGraph formula s s.assigned rank) (arrays : ArrayBounds s)
     (active : ActiveTrail s) {var : Nat} (lower : 1 ≤ var) (upper : var ≤ s.nVars)
     (fresh : FreshVariable s var) :
@@ -172,7 +172,7 @@ theorem ReasonGraph.decide_of_fresh {formula : CNF Nat} {s : State} {rank : Lit 
       obtain ⟨k, beforeK, equal⟩ := oldTails j positive within
       exact ⟨k, beforeK, (decide_trail_prefix (Nat.lt_trans beforeK earlier)).trans equal⟩
 
-theorem ReasonGraph.decide {formula : CNF Nat} {s : State} {rank : Lit → Nat}
+theorem ReasonGraph.decide {formula : Std.Sat.CNF Nat} {s : State} {rank : Lit → Nat}
     (graph : ReasonGraph formula s s.assigned rank) (arrays : ArrayBounds s)
     (active : ActiveTrail s) {var : Nat} (lower : 1 ≤ var) (upper : var ≤ s.nVars)
     (positive : s.mark (2 * var) = 0) (negative : s.mark (2 * var + 1) = 0) :
@@ -183,7 +183,7 @@ theorem ReasonGraph.decide {formula : CNF Nat} {s : State} {rank : Lit → Nat}
 
 /-- A reason graph restricts to any earlier trail prefix because every edge
 already points to a strictly smaller index. -/
-theorem ReasonGraph.prefix {formula : CNF Nat} {s : State} {count keep : Nat} {rank : Lit → Nat}
+theorem ReasonGraph.prefix {formula : Std.Sat.CNF Nat} {s : State} {count keep : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula s count rank) (bound : keep ≤ count) :
     ReasonGraph formula s keep rank :=
   ⟨Nat.le_trans bound graph.countBound,
@@ -192,7 +192,7 @@ theorem ReasonGraph.prefix {formula : CNF Nat} {s : State} {count keep : Nat} {r
       (Nat.lt_of_lt_of_le beforeI bound) (Nat.lt_of_lt_of_le beforeJ bound),
     fun i before => graph.clauses i (Nat.lt_of_lt_of_le before bound)⟩
 
-theorem ReasonGraph.frame {formula : CNF Nat} {before after : State} {count : Nat}
+theorem ReasonGraph.frame {formula : Std.Sat.CNF Nat} {before after : State} {count : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula before count rank)
     (arena : after.arena = before.arena) (reasons : after.reasons = before.reasons)
     (trail : after.trail = before.trail) (variables : after.nVars = before.nVars) :
@@ -211,7 +211,7 @@ theorem ReasonGraph.frame {formula : CNF Nat} {before after : State} {count : Na
 
 /-- Actual restart retains the forced prefix and leaves all its reason data
 unchanged. Restricting the DAG therefore preserves every surviving edge. -/
-theorem ReasonGraph.restart {formula : CNF Nat} {s : State} {rank : Lit → Nat}
+theorem ReasonGraph.restart {formula : Std.Sat.CNF Nat} {s : State} {rank : Lit → Nat}
     (graph : ReasonGraph formula s s.assigned rank) (bounds : TrailBounds s) :
     ReasonGraph formula s.restart s.restart.assigned rank := by
   have forced := Nat.le_trans bounds.forcedProcessed bounds.processedAssigned
@@ -219,7 +219,7 @@ theorem ReasonGraph.restart {formula : CNF Nat} {s : State} {rank : Lit → Nat}
   rw [restart_assigned bounds]
   exact restricted.frame restart_arena restart_reasons restart_trail restart_nVars
 
-theorem ReasonGraph.addClause {formula : CNF Nat} {s : State} {count : Nat} {rank : Lit → Nat}
+theorem ReasonGraph.addClause {formula : Std.Sat.CNF Nat} {s : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula s count rank) (lits : Array Lit) (original : Bool) :
     ReasonGraph formula (s.addClause lits original).1 count rank := by
   constructor
@@ -237,7 +237,7 @@ theorem ReasonGraph.addClause {formula : CNF Nat} {s : State} {count : Nat} {ran
 
 /-- Concrete earlier reason tails establish the semantic dependency used for
 root soundness and compatible-model preservation. -/
-theorem ReasonGraph.reasonConsequences {formula : CNF Nat} {s : State} {rank : Lit → Nat}
+theorem ReasonGraph.reasonConsequences {formula : Std.Sat.CNF Nat} {s : State} {rank : Lit → Nat}
     (graph : ReasonGraph formula s s.assigned rank) : ReasonConsequences formula s := by
   intro i before nondecision a model compatible
   obtain ⟨lits, _, nonempty, head, entailed, earlier⟩ := graph.clauses i before nondecision

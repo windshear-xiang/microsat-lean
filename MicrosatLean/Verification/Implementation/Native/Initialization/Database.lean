@@ -8,7 +8,7 @@ open CDCL Representation Std.Sat
 
 /-- Only clauses preceding the current executable loop index have been
 represented in the arena. Future clauses impose no invariant yet. -/
-def inputPrefix (formula : Formula) (index : Nat) : CNF Nat :=
+def inputPrefix (formula : Formula) (index : Nat) : Std.Sat.CNF Nat :=
   ⟨(formula.clauses.extract 0 index).map clauseView⟩
 
 @[simp] theorem inputPrefix_zero (formula : Formula) : inputPrefix formula 0 = CNF.empty := by

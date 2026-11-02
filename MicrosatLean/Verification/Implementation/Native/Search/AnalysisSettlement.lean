@@ -5,7 +5,7 @@ namespace MicrosatLean.Verification.Implementation.Native.Search
 
 open CDCL Representation Analysis Propagation Std.Sat
 
-private theorem assertion_space {formula : CNF Nat} {s : State} {conflict decision : Nat}
+private theorem assertion_space {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : AnalysisTransitionEntry formula s conflict lits rank decision) :
     (CDCL.analyze s conflict).1.assigned < (CDCL.analyze s conflict).1.trail.size := by
@@ -21,7 +21,7 @@ private theorem assertion_space {formula : CNF Nat} {s : State} {conflict decisi
   rw [ready.arrays.trailSize]
   omega
 
-private theorem asserted_head_true {formula : CNF Nat} {s : State} {conflict decision : Nat}
+private theorem asserted_head_true {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : AnalysisTransitionEntry formula s conflict lits rank decision) (root : Bool) :
     let result := CDCL.analyze s conflict
@@ -33,7 +33,7 @@ private theorem asserted_head_true {formula : CNF Nat} {s : State} {conflict dec
   refine ⟨(CDCL.analyze s conflict).1.assigned, by change _ < _ + 1; omega, ?_⟩
   rw [assign_trail_last (assertion_space entry), first]
 
-private theorem asserted_not_false_head {formula : CNF Nat} {s : State} {conflict decision : Nat}
+private theorem asserted_not_false_head {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : AnalysisTransitionEntry formula s conflict lits rank decision) (root : Bool)
     (count : Nat) (bound : count ≤ (CDCL.analyze s conflict).1.assigned) :
@@ -49,7 +49,7 @@ private theorem asserted_not_false_head {formula : CNF Nat} {s : State} {conflic
   rw [first]
   exact congrArg Lit.var value
 
-private theorem asserted_old_decision {formula : CNF Nat} {s : State} {conflict decision : Nat}
+private theorem asserted_old_decision {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : AnalysisTransitionEntry formula s conflict lits rank decision) (root : Bool)
     (index : Nat) (before : index < ((CDCL.analyze s conflict).1.assign (CDCL.analyze s conflict).2 root).assigned)
@@ -82,7 +82,7 @@ private theorem asserted_old_decision {formula : CNF Nat} {s : State} {conflict 
 /-- Real analysis restores all old completed watches from its saved decision
 prefix; allocation's newly false tail watch is satisfied by the actual
 asserting head. No after-settlement premise is used. -/
-theorem StateCertificate.analyze_settled {formula : CNF Nat} {s : State}
+theorem StateCertificate.analyze_settled {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     {conflict decision : Nat} {lits : Array Lit}
     (certificate : StateCertificate formula s original learned heads rank)
@@ -130,7 +130,7 @@ theorem StateCertificate.analyze_settled {formula : CNF Nat} {s : State}
 /-- Every old unit is true in the retained decision prefix, and a newly
 learned unit is true at the actual asserting slot. Thus unit truth survives
 the full analyzer/allocator/assertion branch independently of old witnesses. -/
-theorem StateCertificate.analyze_units {formula : CNF Nat} {s : State}
+theorem StateCertificate.analyze_units {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     {conflict decision : Nat} {lits : Array Lit}
     (_certificate : StateCertificate formula s original learned heads rank)
@@ -152,7 +152,7 @@ theorem StateCertificate.analyze_units {formula : CNF Nat} {s : State}
 watched literal of the learned clause occurs falsely before such a decision:
 the head was fresh, and its highest tail is at or above every retained
 decision. Thus the actual allocation also preserves saved watch history. -/
-theorem StateCertificate.analyze_saved {formula : CNF Nat} {s : State}
+theorem StateCertificate.analyze_saved {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     {conflict decision : Nat} {lits : Array Lit}
     (certificate : StateCertificate formula s original learned heads rank)

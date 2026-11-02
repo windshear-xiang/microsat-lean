@@ -34,7 +34,7 @@ theorem choose_sat_gate {formula : Formula} {m : CDCL.Machine}
       exact value
     have saved := represented.phases i before
     rw [get, equal] at saved
-    change Native.assignment m.solver.phases lit.1 = lit.2
+    change MicrosatLean.Verification.assignment m.solver.phases lit.1 = lit.2
     rw [Native.assignment_eq_getElem _ phaseBound]
     simpa only [getElem!_pos m.solver.phases lit.1 phaseBound] using saved
   · intro var lower upper

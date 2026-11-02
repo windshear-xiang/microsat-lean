@@ -1,4 +1,4 @@
-import MicrosatLean.CDCL.State
+import MicrosatLean.Verification.Progress.Rank
 
 namespace MicrosatLean.Verification.Implementation.Native.Search
 
@@ -16,14 +16,6 @@ def capacityDebt (bound limit : Nat) : Nat := bound - min bound limit
 /-- Remaining distinct clauses that could be learned without forgetting. -/
 def clauseDebt (bound count : Nat) : Nat := bound - count
 
-/-- A decrease in capacity debt dominates any increase in clause debt. The
-factor `bound + 1` also handles `bound = 0`, without a positivity hypothesis. -/
-def numericProgress (bound count limit : Nat) : Nat :=
-  (bound + 1) * capacityDebt bound limit + clauseDebt bound count
-
-/-- The numeric component uses the actual executable state's counters. -/
-def clauseProgress (bound : Nat) (s : CDCL.State) : Nat :=
-  numericProgress bound s.nLemmas s.maxLemmas
 
 @[simp] theorem capacityDebt_zero_bound (limit : Nat) : capacityDebt 0 limit = 0 := by
   simp [capacityDebt]

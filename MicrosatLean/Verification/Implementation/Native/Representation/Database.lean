@@ -6,17 +6,7 @@ namespace MicrosatLean.Verification.Implementation.Native.Representation
 
 open CDCL
 
-/-- Ghost clause contents name genuine arena starts; arbitrary terminated
-suffixes of a stored clause are not themselves database entries. -/
-structure StoredClause where
-  id : Nat
-  lits : Array Lit
 
-/-- The exact consecutive layout, beginning at a watch-header boundary. -/
-def DatabaseFrom (s : State) (start : Nat) : List StoredClause → Prop
-  | [] => start = s.arena.size
-  | entry :: rest => entry.id = start + 2 ∧ PackedClause s entry.id entry.lits ∧
-      DatabaseFrom s (entry.id + entry.lits.size + 1) rest
 
 /-- Original clauses precede learned clauses. The fixed boundary and learned
 counter agree with this ghost layout of the actual packed arena. -/
@@ -25,7 +15,6 @@ structure Database (s : State) (original learned : List StoredClause) : Prop whe
   fixed : s.fixed = 2 + (original.map fun entry => entry.lits.size + 3).sum
   learnedCount : s.nLemmas = learned.length
 
-def StoredClause.view (entry : StoredClause) : Std.Sat.CNF.Clause Nat := clauseView entry.lits
 
 def databaseView (entries : List StoredClause) : Std.Sat.CNF Nat :=
   ⟨(entries.map StoredClause.view).toArray⟩

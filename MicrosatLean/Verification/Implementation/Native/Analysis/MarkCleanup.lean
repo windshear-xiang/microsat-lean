@@ -6,7 +6,7 @@ open CDCL Representation Std.Sat
 
 /-- Restricting the actual reason DAG to the target's inclusive prefix shows
 that recursive minimization cannot retag any later trail literal. -/
-theorem implied_mark_later {formula : CNF Nat} {snapshot s : State} {count : Nat} {rank : Lit → Nat}
+theorem implied_mark_later {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (storage : ReasonStorage snapshot s)
     (fuel target query : Nat) (targetBefore : target < query) (queryBound : query < count) :
     (implied fuel s snapshot.trail[target]!).1.mark snapshot.trail[query]! = s.mark snapshot.trail[query]! := by
@@ -39,7 +39,7 @@ private structure CleanInv {snapshot : State} {count : Nat}
   clean : ∀ i, c.source.forced ≤ i → i ≤ c.candidate → c.candidate < i + offset →
     acc.1.mark snapshot.trail[i]! = 1
 
-private theorem finish_clean {formula : CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
+private theorem finish_clean {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (c : CleanupContext snapshot count)
     (offset : Nat) (within : offset ≤ c.candidate) (s : State) (frame : LearnedFrame c.source s)
     (clean : ∀ i, c.source.forced ≤ i → i ≤ c.candidate → c.candidate < i + offset →
@@ -62,7 +62,7 @@ private theorem finish_clean {formula : CNF Nat} {snapshot : State} {count : Nat
       exact current same.symm)]
     exact clean i lower upper (by omega)
 
-private theorem clean_step {formula : CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
+private theorem clean_step {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (c : CleanupContext snapshot count)
     (offset : Nat) (acc : LearnedAcc) (inv : CleanInv c offset acc)
     (bound : offset < c.candidate + 1 - c.source.forced) :
@@ -90,7 +90,7 @@ private theorem clean_step {formula : CNF Nat} {snapshot : State} {count : Nat} 
     split <;> exact finish_clean graph c offset within result.1 frame clean _ _ _
   · exact finish_clean graph c offset within acc.1 inv.frame inv.clean _ _ _
 
-private theorem clean_loop {formula : CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
+private theorem clean_loop {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (c : CleanupContext snapshot count)
     (fuel start : Nat) (acc : LearnedAcc) (bound : start + fuel ≤ c.candidate + 1 - c.source.forced)
     (inv : CleanInv c start acc) :
@@ -108,7 +108,7 @@ private theorem clean_loop {formula : CNF Nat} {snapshot : State} {count : Nat} 
 
 /-- Every actually scanned nonroot slot is written back to tag one. Later
 recursive calls cannot undo this because all reason edges point earlier. -/
-theorem buildLearned_mark_one {formula : CNF Nat} {snapshot s : State} {count : Nat} {rank : Lit → Nat}
+theorem buildLearned_mark_one {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (storage : ReasonStorage snapshot s)
     (trail : s.trail = snapshot.trail) (candidate : Nat) (candidateBound : candidate < count)
     (lower : s.forced ≤ candidate) (indices : ∀ i, i ≤ candidate → snapshot.trail[i]! < s.marks.size) :
@@ -130,7 +130,7 @@ theorem buildLearned_mark_one {formula : CNF Nat} {snapshot s : State} {count : 
 
 /-- Although recursive minimization creates cached six tags transiently, the
 real analyzer returns with tag one at every retained nonroot trail position. -/
-theorem analyze_mark_one {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem analyze_mark_one {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) :
     ∀ i, (CDCL.analyze s conflict).1.forced ≤ i → i < (CDCL.analyze s conflict).1.assigned →
@@ -196,7 +196,7 @@ before advancing its boundary. -/
 def SixBefore (s : State) : Prop :=
   ∀ i, i < s.assigned → s.mark s.trail[i]! = 6 → i < s.forced
 
-theorem SixBefore.analyze {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem SixBefore.analyze {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) : SixBefore (CDCL.analyze s conflict).1 := by
   intro i before six
@@ -237,7 +237,7 @@ theorem SixBefore.decide {s : State} (sixBefore : SixBefore s) (var : Nat)
 
 /-- A nonsingleton actual learned clause retains a nonroot tail, and hence
 the real backjump cursor is strictly above the root boundary. -/
-theorem analyze_nonroot_prefix {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem analyze_nonroot_prefix {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision)
     (many : 1 < (analysisLearned s conflict).size) :

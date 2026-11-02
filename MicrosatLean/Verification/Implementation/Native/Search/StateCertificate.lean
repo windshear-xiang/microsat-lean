@@ -10,7 +10,7 @@ open CDCL Representation Propagation Analysis Initialization Std.Sat
 /-- The shared structural and semantic data at a public search boundary.
 Decision history, propagation closure, and the watch cursor are phase-specific
 obligations, rather than assumed consequences of this base certificate. -/
-structure StateCertificate (formula : CNF Nat) (s : State)
+structure StateCertificate (formula : Std.Sat.CNF Nat) (s : State)
     (original learned : List StoredClause) (heads : Nat → List Nat) (rank : Lit → Nat) : Prop where
   arrays : ArrayBounds s
   bounds : TrailBounds s
@@ -32,12 +32,12 @@ structure StateCertificate (formula : CNF Nat) (s : State)
   roots : RootTagConsequences formula s s.assigned s
   rootPrefix : ∀ i, i < s.forced → s.mark s.trail[i]! = 6
 
-def HasStateCertificate (formula : CNF Nat) (s : State) : Prop :=
+def HasStateCertificate (formula : Std.Sat.CNF Nat) (s : State) : Prop :=
   ∃ original learned heads rank, StateCertificate formula s original learned heads rank
 
 /-- Cursor bookkeeping retains the shared data; a larger root prefix must
 be justified by the propagation phase's concrete root-tag facts. -/
-theorem StateCertificate.setCursors {formula : CNF Nat} {s : State}
+theorem StateCertificate.setCursors {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (processed forced : Nat) (rootBound : forced ≤ processed) (trailBound : processed ≤ s.assigned)
@@ -56,7 +56,7 @@ theorem StateCertificate.setCursors {formula : CNF Nat} {s : State}
   · exact ⟨certificate.watches.links, certificate.watches.references,
       certificate.watches.covered, certificate.watches.unique⟩
 
-theorem StateCertificate.processNext {formula : CNF Nat} {s : State}
+theorem StateCertificate.processNext {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (pending : s.processed < s.assigned) :
@@ -66,7 +66,7 @@ theorem StateCertificate.processNext {formula : CNF Nat} {s : State}
     (Nat.le_trans certificate.bounds.forcedProcessed (Nat.le_add_right _ _))
     (by omega) certificate.rootPrefix
 
-theorem StateCertificate.finishRootPropagation {formula : CNF Nat} {s : State}
+theorem StateCertificate.finishRootPropagation {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (rootTags : ∀ i, i < s.processed → s.mark s.trail[i]! = 6) :

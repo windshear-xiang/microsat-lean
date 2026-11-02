@@ -129,7 +129,7 @@ theorem buildLearned_root_six (s : State) (candidate index : Nat) (lower : s.for
   simp only [Std.Legacy.Range.size, Nat.sub_zero, Nat.add_sub_cancel, Nat.div_one]
   exact final.2
 
-theorem DecisionAnalysisEntry.resolved_rootPrefix {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem DecisionAnalysisEntry.resolved_rootPrefix {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) :
     ∀ i, i < s.forced → (analysisResolved s conflict).mark s.trail[i]! = 6 := by
@@ -159,7 +159,7 @@ theorem DecisionAnalysisEntry.resolved_rootPrefix {formula : CNF Nat} {s : State
     change (analysisResolved s conflict).assigned ≤ i at popped
     omega
 
-theorem analyze_rootPrefix {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem analyze_rootPrefix {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) :
     ∀ i, i < (CDCL.analyze s conflict).1.forced →
@@ -208,7 +208,7 @@ theorem analyze_rootPrefix {formula : CNF Nat} {s : State} {conflict decision : 
   simpa only [State.mark, addClause_marks, addClause_trail, beforeEq, backjump_trail, averageTrail,
     averageMarks] using preserved.trans (by simpa only [State.mark, averageMarks, averageTrail] using builtSix)
 
-theorem analyze_root_mark_eq {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem analyze_root_mark_eq {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) (i : Nat) (root : i < s.forced) :
     (CDCL.analyze s conflict).1.mark s.trail[i]! = s.mark s.trail[i]! := by
@@ -217,7 +217,7 @@ theorem analyze_root_mark_eq {formula : CNF Nat} {s : State} {conflict decision 
   rw [analyze_trail] at after
   exact after.trans (entry.rootPrefix i root before).symm
 
-theorem analyze_validMarkTags {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem analyze_validMarkTags {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) :
     ValidMarkTags (CDCL.analyze s conflict).1 (CDCL.analyze s conflict).1.assigned (CDCL.analyze s conflict).1 := by

@@ -25,6 +25,10 @@ def formulaView (formula : Formula) : CNF :=
 
 def assignment (model : Array Bool) : Assignment := fun var => model.getD var false
 
+/-- Bounds for an executable clause, shared by normalization proofs. -/
+def ClauseWellFormed (variables : Nat) (clause : Array Lit) : Prop :=
+  ∀ lit ∈ clause, 0 < lit.var ∧ lit.var ≤ variables
+
 def WellFormed (formula : Formula) : Prop :=
   ∀ clause ∈ formula.clauses, ∀ lit ∈ clause,
     0 < lit.var ∧ lit.var ≤ formula.numVars

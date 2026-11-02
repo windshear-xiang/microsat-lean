@@ -22,7 +22,7 @@ theorem database_sat_of_complete_closed {s : State} {original learned : List Sto
   apply (clauseView_sat_iff _ _).mpr
   exact ⟨lit, hlit, true_of_unmarked sound complete bounded unmarked⟩
 
-theorem input_sat_of_database_closed {s : State} {formula : CNF Nat}
+theorem input_sat_of_database_closed {s : State} {formula : Std.Sat.CNF Nat}
     {original learned : List StoredClause} (database : Database s original learned)
     (meaning : DatabaseMeaning formula original learned) (sound : MarksSound s)
     (complete : AllVariablesAssigned s) (closed : DatabaseNoConflict s (original ++ learned)) :

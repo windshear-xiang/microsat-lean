@@ -10,34 +10,34 @@ theorem rep_change_machine {m : CDCL.Machine} {a : LogicalState} {w : Representa
 private theorem next_packed_frame {before after : CDCL.State} {entry : StoredClause}
     (packed : PackedClause before entry) (variables : after.nVars = before.nVars)
     (arena : after.arena = before.arena) : PackedClause after entry := by
-  refine ⟨packed.header, ?_, ?_, ?_, ?_⟩
-  · simpa only [arena] using packed.bound
+  refine ⟨packed.startLower, ?_, ?_, ?_, ?_⟩
+  · simpa only [arena] using packed.endBound
   · simpa only [CDCL.State.db, arena] using packed.literals
   · simpa only [CDCL.State.db, arena] using packed.terminator
-  · simpa only [variables] using packed.declared
+  · simpa only [variables] using packed.wellFormed
 
 private theorem next_layout_frame {before after : CDCL.State} {start : Nat} {entries : List StoredClause}
     (layout : DatabaseFrom before start entries) (variables : after.nVars = before.nVars)
     (arena : after.arena = before.arena) : DatabaseFrom after start entries := by
   induction entries generalizing start with
-  | nil => simpa only [DatabaseFrom, arena] using layout
+  | nil => simpa only [DatabaseFrom, Native.Representation.DatabaseFrom, arena] using layout
   | cons entry rest ih =>
     exact ⟨layout.1, next_packed_frame layout.2.1 variables arena, ih layout.2.2⟩
 
 private theorem next_watches_frame {before after : CDCL.State} {w : RepresentationWitness}
     (watches : WatchRepresentation before w) (arena : after.arena = before.arena)
     (heads : after.first = before.first) : WatchRepresentation after w := by
-  refine ⟨?_, watches.genuine, watches.covered, watches.unique⟩
+  refine ⟨?_, watches.references, watches.covered, watches.unique⟩
   intro lit
-  simpa only [arena, heads, CDCL.State.db] using watches.lists lit
+  simpa only [Native.Propagation.WatchLinks, arena, heads, CDCL.State.db] using watches.links lit
 
 /-- Processing changes only a cursor, not the logical assignment. -/
 theorem rep_set_processed {m : CDCL.Machine} {a : LogicalState} {w : RepresentationWitness}
     (r : Rep m a w) (processed : Nat) (lower : m.solver.forced ≤ processed)
     (upper : processed ≤ m.solver.assigned) :
     Rep { m with solver := { m.solver with processed := processed } } a w :=
-  ⟨r.variables, ⟨r.arrays.first, r.arrays.marks, r.arrays.reasons, r.arrays.phases,
-      r.arrays.trail, r.arrays.previous, r.arrays.next⟩,
+  ⟨r.variables, ⟨r.arrays.firstSize, r.arrays.marksSize, r.arrays.reasonsSize, r.arrays.phasesSize,
+      r.arrays.trailSize, r.arrays.previousSize, r.arrays.nextSize⟩,
     r.reserved, next_layout_frame r.layout rfl rfl, r.fixed, r.count, r.original, r.learned,
     r.trailLength, r.rootSize, ⟨lower, upper, r.cursors.2.2⟩, r.trail, r.active,
     r.marks, r.phases, r.reasons, next_watches_frame r.watches rfl rfl, r.order⟩
@@ -47,8 +47,8 @@ together. Root soundness is established separately from root tags. -/
 theorem rep_set_forced {m : CDCL.Machine} {a : LogicalState} {w : RepresentationWitness}
     (r : Rep m a w) (forced : Nat) (lower : forced ≤ m.solver.processed) :
     Rep { m with solver := { m.solver with forced := forced } } { a with rootSize := forced } w :=
-  ⟨r.variables, ⟨r.arrays.first, r.arrays.marks, r.arrays.reasons, r.arrays.phases,
-      r.arrays.trail, r.arrays.previous, r.arrays.next⟩,
+  ⟨r.variables, ⟨r.arrays.firstSize, r.arrays.marksSize, r.arrays.reasonsSize, r.arrays.phasesSize,
+      r.arrays.trailSize, r.arrays.previousSize, r.arrays.nextSize⟩,
     r.reserved, next_layout_frame r.layout rfl rfl, r.fixed, r.count, r.original, r.learned,
     r.trailLength, rfl, ⟨lower, r.cursors.2⟩, r.trail, r.active,
     r.marks, r.phases, r.reasons, next_watches_frame r.watches rfl rfl, r.order⟩

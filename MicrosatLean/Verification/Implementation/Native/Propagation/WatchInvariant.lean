@@ -4,15 +4,6 @@ namespace MicrosatLean.Verification.Implementation.Native.Propagation
 
 open CDCL Representation
 
-/-- A simultaneous ghost description of finite watch chains, genuine refs,
-both slots of every long stored clause, and unique ownership by literal head.
-Literal order is read from the current ghost database, after any permutation. -/
-structure WatchCertificate (s : State) (entries : List StoredClause) (heads : Nat → List Nat) : Prop where
-  links : ∀ lit, WatchLinks s lit (heads lit)
-  references : ∀ lit ref, ref ∈ heads lit → StoredWatchRef entries ref
-  covered : ∀ entry ∈ entries, 2 ≤ entry.lits.size →
-    ClauseWatches heads entry.id entry.lits[0]! entry.lits[1]!
-  unique : ∀ lit other ref, ref ∈ heads lit → ref ∈ heads other → lit = other
 
 theorem WatchCertificate.frameArrays {before after : State} {entries : List StoredClause}
     {heads : Nat → List Nat} (certificate : WatchCertificate before entries heads)

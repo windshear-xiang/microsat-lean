@@ -7,7 +7,7 @@ open CDCL Representation Propagation Std.Sat
 
 /-- Concrete incoming reachability conditions for a non-root analysis call.
 The current-block witness is an input conflict literal, not an analyzer result. -/
-structure AnalysisTransitionEntry (formula : CNF Nat) (s : State) (conflict : Nat)
+structure AnalysisTransitionEntry (formula : Std.Sat.CNF Nat) (s : State) (conflict : Nat)
     (conflictLits : Array Lit) (rank : Lit → Nat) (decision : Nat) : Prop where
   semantic : AnalysisEntry formula s conflict conflictLits rank
   bounds : TrailBounds s
@@ -22,7 +22,7 @@ structure AnalysisTransitionEntry (formula : CNF Nat) (s : State) (conflict : Na
 
 /-- All facts needed for the real asserting assignment at the actual clause
 identifier returned by analysis. Neither its graph nor its marks are assumed. -/
-structure AnalysisReady (formula : CNF Nat) (result : State × Nat) (learned : Array Lit) : Prop where
+structure AnalysisReady (formula : Std.Sat.CNF Nat) (result : State × Nat) (learned : Array Lit) : Prop where
   packed : PackedClause result.1 result.2 learned
   nonempty : 0 < learned.size
   entailed : CNF.EntailsClause formula (clauseView learned)
@@ -37,7 +37,7 @@ structure AnalysisReady (formula : CNF Nat) (result : State × Nat) (learned : A
   opposite : result.1.mark (Lit.negate (result.1.db result.2)) = 0
   tails : ∀ j, 0 < j → j < learned.size → TrailMember result.1 result.1.assigned learned[j]!
 
-structure AnalysisAssigned (formula : CNF Nat) (s : State) : Prop where
+structure AnalysisAssigned (formula : Std.Sat.CNF Nat) (s : State) : Prop where
   graph : ∃ rank, ReasonGraph formula s s.assigned rank
   arrays : ArrayBounds s
   bounds : TrailBounds s
@@ -46,7 +46,7 @@ structure AnalysisAssigned (formula : CNF Nat) (s : State) : Prop where
   phases : TrailPhases s
   marked : MarkedOnTrail s
 
-theorem AnalysisReady.assign {formula : CNF Nat} {result : State × Nat} {learned : Array Lit}
+theorem AnalysisReady.assign {formula : Std.Sat.CNF Nat} {result : State × Nat} {learned : Array Lit}
     (ready : AnalysisReady formula result learned) (root : Bool) :
     AnalysisAssigned formula (result.1.assign result.2 root) := by
   obtain ⟨rank, graph⟩ := ready.graph
@@ -80,7 +80,7 @@ private structure ResolvedFacts (original resolved : State) : Prop where
   nonempty : 0 < (buildLearned resolved resolved.assigned).2.1.size
   head : (buildLearned resolved resolved.assigned).2.1[0]! = resolved.trail[resolved.assigned]!
 
-private theorem AnalysisTransitionEntry.resolved {formula : CNF Nat} {s : State} {conflict : Nat}
+private theorem AnalysisTransitionEntry.resolved {formula : Std.Sat.CNF Nat} {s : State} {conflict : Nat}
     {lits : Array Lit} {rank : Lit → Nat} {decision : Nat}
     (entry : AnalysisTransitionEntry formula s conflict lits rank decision) :
     ResolvedFacts s (analysisResolved s conflict) := by
@@ -180,7 +180,7 @@ private theorem backjump_averages (s : State) (candidate fast slow : Nat) :
 /-- The actual analyzer establishes the full precondition for its subsequent
 asserting assignment. UIP retention, cursor geometry, marks and the old reason
 graph are derived from the concrete incoming conflict/decision invariants. -/
-theorem AnalysisTransitionEntry.ready {formula : CNF Nat} {s : State} {conflict : Nat}
+theorem AnalysisTransitionEntry.ready {formula : Std.Sat.CNF Nat} {s : State} {conflict : Nat}
     {lits : Array Lit} {rank : Lit → Nat} {decision : Nat}
     (entry : AnalysisTransitionEntry formula s conflict lits rank decision) :
     AnalysisReady formula (analyze s conflict) (analysisLearned s conflict) := by
@@ -320,7 +320,7 @@ theorem AnalysisTransitionEntry.ready {formula : CNF Nat} {s : State} {conflict 
 
 /-- End-to-end composition of actual analysis and its actual learned-clause
 assignment. All resulting graph and structural facts are conclusions. -/
-theorem AnalysisTransitionEntry.assign {formula : CNF Nat} {s : State} {conflict : Nat}
+theorem AnalysisTransitionEntry.assign {formula : Std.Sat.CNF Nat} {s : State} {conflict : Nat}
     {lits : Array Lit} {rank : Lit → Nat} {decision : Nat}
     (entry : AnalysisTransitionEntry formula s conflict lits rank decision) (root : Bool) :
     AnalysisAssigned formula ((analyze s conflict).1.assign (analyze s conflict).2 root) :=

@@ -103,7 +103,7 @@ theorem analysisBeforeStore_nLemmas (s : State) (conflict : Nat) :
 entry assumptions describe the original state, entailed conflict, root tags,
 and concrete ordered reason graph. No fact about an intermediate MARK clause
 or a returned learned clause is an assumption. -/
-theorem analyze_learned_sound {formula : CNF Nat} (s : State) (conflict : Nat)
+theorem analyze_learned_sound {formula : Std.Sat.CNF Nat} (s : State) (conflict : Nat)
     {conflictLits : Array Lit} {rank : Lit → Nat}
     (graph : ReasonGraph formula s s.assigned rank) (arrays : ArrayBounds s)
     (active : ActiveTrail s) (positive : 0 < s.assigned)
@@ -186,7 +186,7 @@ theorem analyze_learned_sound {formula : CNF Nat} (s : State) (conflict : Nat)
 /-- Concrete incoming invariants for a conflict-analysis call. The semantic
 premises concern the original input, original roots, and stored conflict and
 reason clauses. The analyzer's returned clause is not mentioned here. -/
-structure AnalysisEntry (formula : CNF Nat) (s : State) (conflict : Nat)
+structure AnalysisEntry (formula : Std.Sat.CNF Nat) (s : State) (conflict : Nat)
     (conflictLits : Array Lit) (rank : Lit → Nat) : Prop where
   graph : ReasonGraph formula s s.assigned rank
   arrays : ArrayBounds s
@@ -199,7 +199,7 @@ structure AnalysisEntry (formula : CNF Nat) (s : State) (conflict : Nat)
   root : RootTagConsequences formula s s.assigned s
   rootPrefix : ∀ i, i < s.forced → i < s.assigned → s.mark s.trail[i]! = 6
 
-theorem AnalysisEntry.learned_sound {formula : CNF Nat} {s : State} {conflict : Nat}
+theorem AnalysisEntry.learned_sound {formula : Std.Sat.CNF Nat} {s : State} {conflict : Nat}
     {conflictLits : Array Lit} {rank : Lit → Nat}
     (entry : AnalysisEntry formula s conflict conflictLits rank) :
     CNF.EntailsClause formula (clauseView (analysisLearned s conflict)) ∧
@@ -210,7 +210,7 @@ theorem AnalysisEntry.learned_sound {formula : CNF Nat} {s : State} {conflict : 
 /-- The actual clause identifier returned by `analyze` addresses its entailed,
 well-formed learned clause in the actual resulting arena. This composes the
 real resolution, recursive minimization, backjump, and allocation operations. -/
-theorem analyze_stored_clause {formula : CNF Nat} {s : State} {conflict : Nat}
+theorem analyze_stored_clause {formula : Std.Sat.CNF Nat} {s : State} {conflict : Nat}
     {conflictLits : Array Lit} {rank : Lit → Nat}
     (entry : AnalysisEntry formula s conflict conflictLits rank) (reserved : 2 ≤ s.arena.size) :
     PackedClause (analyze s conflict).1 (analyze s conflict).2 (analysisLearned s conflict) ∧
@@ -224,7 +224,7 @@ theorem analyze_stored_clause {formula : CNF Nat} {s : State} {conflict : Nat}
 /-- The actual packed database is extended by exactly the actual entailed
 learned clause. Its ghost meaning therefore continues to describe precisely
 the input models. The database layout and semantic extension are both checked. -/
-theorem analyze_database_meaning {formula : CNF Nat} {s : State} {conflict : Nat}
+theorem analyze_database_meaning {formula : Std.Sat.CNF Nat} {s : State} {conflict : Nat}
     {conflictLits : Array Lit} {rank : Lit → Nat} {original learned : List StoredClause}
     (entry : AnalysisEntry formula s conflict conflictLits rank)
     (database : Database s original learned) (meaning : DatabaseMeaning formula original learned) :

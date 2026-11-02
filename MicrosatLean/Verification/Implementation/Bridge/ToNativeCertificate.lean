@@ -3,26 +3,13 @@ import MicrosatLean.Verification.Implementation.Bridge.ToNativeReasons
 namespace MicrosatLean.Verification.Implementation.Bridge
 
 theorem native_entry_source {w : RepresentationWitness} {entry : Native.Representation.StoredClause}
-    (member : entry ∈ w.original.map toNativeEntry ++ w.learned.map toNativeEntry) :
-    ∃ source ∈ w.entries, toNativeEntry source = entry := by
-  apply List.mem_map.mp
-  simpa only [RepresentationWitness.entries, List.map_append] using member
+    (member : entry ∈ w.original ++ w.learned) :
+    ∃ source ∈ w.entries, source = entry :=
+  ⟨entry, member, rfl⟩
 
 theorem watches_toNative {m : CDCL.Machine} {a : LogicalState} {w : RepresentationWitness}
     (represented : Rep m a w) : Native.Propagation.WatchCertificate m.solver
-      (w.original.map toNativeEntry ++ w.learned.map toNativeEntry) w.heads := by
-  refine ⟨?_, ?_, ?_, represented.watches.unique⟩
-  · intro lit
-    have links := represented.watches.lists lit
-    exact ⟨links.1, links.2.1, fun i before => (links.2.2 i before).2.2⟩
-  · intro lit ref member
-    obtain ⟨entry, stored, id, wide⟩ := represented.watches.genuine lit ref member
-    exact ⟨toNativeEntry entry,
-      by simpa only [RepresentationWitness.entries, List.map_append] using
-        List.mem_map.mpr ⟨entry, stored, rfl⟩, id, wide⟩
-  · intro entry member wide
-    obtain ⟨source, stored, rfl⟩ := native_entry_source member
-    exact represented.watches.covered source stored wide
+      (w.original ++ w.learned) w.heads := represented.watches
 
 theorem entry_nonempty {formula : Formula} {m : CDCL.Machine} {a : LogicalState}
     {w : RepresentationWitness} (certificate : Certificate formula m a w)
@@ -33,7 +20,7 @@ theorem entry_nonempty {formula : Formula} {m : CDCL.Machine} {a : LogicalState}
   · exact positive
   · have zero : entry.lits.size = 0 := by omega
     have empty : entry.lits = #[] := Array.eq_empty_of_size_eq_zero zero
-    simp [StoredClause.view, clauseView_literals, empty] at nonempty
+    simp [Native.Representation.StoredClause.view, empty] at nonempty
 
 theorem falsifies_of_negated_view (lit : Lit) (valuation : Assignment)
     (truth : valuation (literalView lit).negate.1 = (literalView lit).negate.2) :
@@ -46,8 +33,8 @@ theorem falsifies_of_negated_view (lit : Lit) (valuation : Assignment)
 
 theorem stateCertificate_toNative {formula : Formula} {m : CDCL.Machine} {a : LogicalState}
     {w : RepresentationWitness} (certificate : Certificate formula m a w) :
-    Native.Search.StateCertificate (Native.formulaView formula) m.solver
-      (w.original.map toNativeEntry) (w.learned.map toNativeEntry) w.heads (trailRank m.solver) := by
+    Native.Search.StateCertificate (MicrosatLean.Verification.formulaView formula) m.solver
+      (w.original) (w.learned) w.heads (trailRank m.solver) := by
   have represented := certificate.representation
   refine ⟨arrays_toNative represented,
     ⟨represented.cursors.1, represented.cursors.2.1, represented.cursors.2.2⟩,

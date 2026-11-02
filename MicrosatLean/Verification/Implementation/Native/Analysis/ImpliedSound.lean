@@ -44,7 +44,7 @@ private theorem rangeList_post {β : Type} (body : Nat → β → Id (ForInStep 
       apply finish final
       simpa only [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hf
 
-private structure ScanContext (formula : CNF Nat) (snapshot : State) (count : Nat)
+private structure ScanContext (formula : Std.Sat.CNF Nat) (snapshot : State) (count : Nat)
     (rank : Lit → Nat) (leaves : Lit → Prop) where
   initial : State
   target : Lit
@@ -58,7 +58,7 @@ private structure ScanContext (formula : CNF Nat) (snapshot : State) (count : Na
   earlier : ∀ j, 0 < j → j < lits.size →
     TrailMember snapshot count lits[j]! ∧ rank lits[j]! < rank target
 
-private structure ScanInv {formula : CNF Nat} {snapshot : State} {count : Nat}
+private structure ScanInv {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     (c : ScanContext formula snapshot count rank leaves) (cursor : Nat) (acc : ImpliedScanState) : Prop where
   frame : MarkFrame c.initial acc.2
@@ -69,7 +69,7 @@ private structure ScanInv {formula : CNF Nat} {snapshot : State} {count : Nat}
   tails : ∀ j, 0 < j → j < c.lits.size → c.reasonId + j < cursor →
     LeafConsequence formula rank leaves (rank c.target) c.lits[j]!
 
-private structure ScanPost {formula : CNF Nat} {snapshot : State} {count : Nat}
+private structure ScanPost {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     (c : ScanContext formula snapshot count rank leaves) (acc : ImpliedScanState) : Prop where
   frame : MarkFrame c.initial acc.2
@@ -80,7 +80,7 @@ private structure ScanPost {formula : CNF Nat} {snapshot : State} {count : Nat}
   tails : acc.1 = none → ∀ j, 0 < j → j < c.lits.size →
     LeafConsequence formula rank leaves (rank c.target) c.lits[j]!
 
-private theorem cursor_read {formula : CNF Nat} {snapshot : State} {count : Nat}
+private theorem cursor_read {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     {c : ScanContext formula snapshot count rank leaves} {cursor : Nat} {acc : ImpliedScanState}
     (inv : ScanInv c cursor acc) {j : Nat} (bound : j < c.lits.size)
@@ -88,7 +88,7 @@ private theorem cursor_read {formula : CNF Nat} {snapshot : State} {count : Nat}
   rw [(c.storage.markFrame inv.frame).db cursor, position]
   exact c.packed.literals j bound
 
-private theorem cursor_lt_end_of_nonzero {formula : CNF Nat} {snapshot : State} {count : Nat}
+private theorem cursor_lt_end_of_nonzero {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     {c : ScanContext formula snapshot count rank leaves} {cursor : Nat} {acc : ImpliedScanState}
     (inv : ScanInv c cursor acc) (nonzero : acc.2.db cursor ≠ 0) :
@@ -101,7 +101,7 @@ private theorem cursor_lt_end_of_nonzero {formula : CNF Nat} {snapshot : State} 
     rw [(c.storage.markFrame inv.frame).db cursor, equal]
     exact c.packed.terminator
 
-private theorem cursor_eq_end_of_zero {formula : CNF Nat} {snapshot : State} {count : Nat}
+private theorem cursor_eq_end_of_zero {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     {c : ScanContext formula snapshot count rank leaves} {cursor : Nat} {acc : ImpliedScanState}
     (inv : ScanInv c cursor acc) (zero : acc.2.db cursor = 0) :
@@ -117,7 +117,7 @@ private theorem cursor_eq_end_of_zero {formula : CNF Nat} {snapshot : State} {co
     have nz := (c.packed.wellFormed _ member).nonzero
     exact False.elim (nz ((cursor_read inv bound position).symm.trans zero))
 
-private theorem scan_advance {formula : CNF Nat} {snapshot : State} {count : Nat}
+private theorem scan_advance {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     {c : ScanContext formula snapshot count rank leaves} {cursor : Nat} {acc : ImpliedScanState}
     (inv : ScanInv c cursor acc) (before : cursor < c.reasonId + c.lits.size)
@@ -135,7 +135,7 @@ private theorem scan_advance {formula : CNF Nat} {snapshot : State} {count : Nat
     · have position : cursor = c.reasonId + j := by omega
       exact cursor_read inv bound position ▸ current
 
-private theorem scan_step {formula : CNF Nat} {snapshot : State} {count : Nat}
+private theorem scan_step {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     (c : ScanContext formula snapshot count rank leaves) (recurse : State → Lit → State × Bool)
     (frame : ∀ s lit, MarkFrame s (recurse s lit).1)
@@ -193,7 +193,7 @@ private theorem scan_step {formula : CNF Nat} {snapshot : State} {count : Nat}
       exact scan_advance inv before acc.2 (MarkFrame.refl _) inv.cache
         (leafConsequence_of_leaf (inv.cache.marked _ member' marked) earlier')
 
-private theorem scan_post {formula : CNF Nat} {snapshot : State} {count : Nat}
+private theorem scan_post {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     (c : ScanContext formula snapshot count rank leaves) (recurse : State → Lit → State × Bool)
     (frame : ∀ s lit, MarkFrame s (recurse s lit).1)
@@ -225,7 +225,7 @@ private theorem scan_post {formula : CNF Nat} {snapshot : State} {count : Nat}
 the candidate from the input and strictly earlier original MARK leaves.
 The fixed reason graph and initial cache are independent hypotheses; neither
 assumes the candidate false or assumes correctness of this function call. -/
-theorem implied_sound {formula : CNF Nat} {snapshot : State} {count : Nat}
+theorem implied_sound {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop} (graph : ReasonGraph formula snapshot count rank)
     (fuel : Nat) (s : State) (lit : Lit) (storage : ReasonStorage snapshot s)
     (cache : ImpliedCache formula snapshot count rank leaves s)

@@ -1,3 +1,4 @@
+import MicrosatLean.Verification.Progress.Rank
 import MicrosatLean.Verification.Implementation.Native.Search.StateCertificate
 import MicrosatLean.Verification.Implementation.Native.Search.Decision
 import MicrosatLean.Verification.Implementation.Native.Reduction.Frame
@@ -5,33 +6,6 @@ import MicrosatLean.Verification.Implementation.Native.Reduction.Frame
 namespace MicrosatLean.Verification.Implementation.Native.Search
 
 open CDCL Representation Reduction
-
-abbrev ControlRank := Nat × Nat × Nat × Nat
-
-def ControlRankLT : ControlRank → ControlRank → Prop :=
-  Prod.Lex Nat.lt (Prod.Lex Nat.lt (Prod.Lex Nat.lt Nat.lt))
-
-theorem controlRank_wellFounded : WellFounded ControlRankLT :=
-  (inferInstance : WellFoundedRelation ControlRank).wf
-
-/-- A learning event grants one pending opportunity to restart at `choose`.
-The credit is consumed before the next propagation invocation begins. -/
-def learningCredit (machine : Machine) : Nat :=
-  match machine.phase with
-  | .beginPropagation => 0
-  | _ => if machine.oldLemmas < machine.solver.nLemmas then 1 else 0
-
-def phaseRank : Phase → Nat
-  | .beginPropagation => 2
-  | .watch => 2
-  | .nextLiteral => 1
-  | .choose => 0
-
-/-- Numeric clause progress dominates restart credit, which dominates trail
-progress and phase bookkeeping. Watch fuel is not part of this global rank. -/
-def controlRank (bound variables : Nat) (machine : Machine) : ControlRank :=
-  (clauseProgress bound machine.solver, learningCredit machine,
-    2 * variables - machine.solver.assigned - machine.solver.processed, phaseRank machine.phase)
 
 /-- A proof-only name for the real `choose` phase before its decision scan. -/
 def prepareChoice (s : State) (cursor oldLemmas : Nat) : State × Nat := Id.run do
@@ -105,7 +79,7 @@ theorem prepareChoice_progress (bound : Nat) (s : State) (cursor old : Nat)
 
 theorem step_beginPropagation_rank (bound variables : Nat) {before after : Machine}
     (phase : before.phase = .beginPropagation) (running : step before = .running after) :
-    ControlRankLT (controlRank bound variables after) (controlRank bound variables before) := by
+    RankLT (controlRank bound variables after) (controlRank bound variables before) := by
   rcases before with ⟨s, cursor, phase, old, root, lit, previous⟩
   simp only at phase
   subst phase
@@ -118,7 +92,7 @@ theorem step_beginPropagation_rank (bound variables : Nat) {before after : Machi
 theorem step_nextLiteral_rank (bound variables : Nat) {before after : Machine}
     (phase : before.phase = .nextLiteral) (running : step before = .running after)
     (bounds : TrailBounds before.solver) (variablesEq : before.solver.nVars = variables) :
-    ControlRankLT (controlRank bound variables after) (controlRank bound variables before) := by
+    RankLT (controlRank bound variables after) (controlRank bound variables before) := by
   rcases before with ⟨s, cursor, phase, old, root, lit, previous⟩
   simp only at phase variablesEq bounds
   subst phase
@@ -146,7 +120,7 @@ theorem step_choose_rank {formula : Std.Sat.CNF Nat} (bound variables : Nat)
     (bounded : before.solver.nLemmas ≤ bound) (variablesEq : before.solver.nVars = variables)
     (cursorValid : ¬ before.solver.nLemmas > before.oldLemmas →
       before.decision = 0 ∨ (1 ≤ before.decision ∧ before.decision ≤ before.solver.nVars)) :
-    ControlRankLT (controlRank bound variables after) (controlRank bound variables before) := by
+    RankLT (controlRank bound variables after) (controlRank bound variables before) := by
   rcases before with ⟨s, cursor, phase, old, root, lit, previous⟩
   simp only at phase bounded variablesEq certificate cursorValid
   subst phase

@@ -5,7 +5,7 @@ namespace MicrosatLean.Verification.Implementation.Native.Analysis
 
 open CDCL Representation Propagation Std.Sat
 
-theorem complement_not_trailMember {formula : CNF Nat} {snapshot s : State} {count i : Nat}
+theorem complement_not_trailMember {formula : Std.Sat.CNF Nat} {snapshot s : State} {count i : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (trail : s.trail = snapshot.trail) (before : i < count) :
     ¬ TrailMember snapshot count s.trail[i]!.negate := by
@@ -19,7 +19,7 @@ theorem complement_not_trailMember {formula : CNF Nat} {snapshot s : State} {cou
 
 /-- Actual clause marking keeps the existing active trail false and never
 writes its opposite polarities when its suffix consists of snapshot literals. -/
-theorem markClause_activeTrail {formula : CNF Nat} {snapshot s : State} {count id : Nat}
+theorem markClause_activeTrail {formula : Std.Sat.CNF Nat} {snapshot s : State} {count id : Nat}
     {rank : Lit → Nat} {lits : Array Lit} (graph : ReasonGraph formula snapshot count rank)
     (trail : s.trail = snapshot.trail) (limit : Nat) (bound : limit ≤ count)
     (arrays : ArrayBounds s) (active : ActiveTrail { s with assigned := limit }) (packed : PackedClause s id lits)
@@ -75,7 +75,7 @@ private structure ResolutionTrailFacts (snapshot : State) (count : Nat) (s : Sta
   bound : s.assigned ≤ count
   empty : s.assigned = 0 → s.mark s.trail[0]! = 0
 
-private theorem clear_last_active {formula : CNF Nat} {snapshot s : State} {count p : Nat}
+private theorem clear_last_active {formula : Std.Sat.CNF Nat} {snapshot s : State} {count p : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (trail : s.trail = snapshot.trail) (bound : p < count)
     (active : ActiveTrail { s with assigned := p + 1 }) :
@@ -127,7 +127,7 @@ private def TrailStep (snapshot : State) (count : Nat) (before : State) : ForInS
       MarkedOnTrail { next with assigned := next.assigned + 1 }
   | .yield next => ResolutionTrailFacts snapshot count next ∧ next.assigned + 1 = before.assigned
 
-private theorem resolutionBody_trail {formula : CNF Nat} {snapshot s : State} {count : Nat}
+private theorem resolutionBody_trail {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (facts : ResolutionTrailFacts snapshot count s) (positive : 0 < s.assigned) :
     TrailStep snapshot count s (resolutionBody s) := by
@@ -216,7 +216,7 @@ private theorem resolutionBody_trail {formula : CNF Nat} {snapshot s : State} {c
           clear _ (resolutionFrame_markClause popped _) markedActive markedMarked (markClause_assigned _ _)
     · exact clear popped (.refl _) active marked rfl
 
-private theorem resolutionScan_trail {formula : CNF Nat} {snapshot : State} {count : Nat}
+private theorem resolutionScan_trail {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank) (fuel : Nat) (s : State)
     (facts : ResolutionTrailFacts snapshot count s) (assigned : s.assigned = fuel)
     (marked : (resolutionScan fuel s).mark
@@ -242,7 +242,7 @@ private theorem resolutionScan_trail {formula : CNF Nat} {snapshot : State} {cou
 /-- The concrete MARK witness in the current decision block forces a real UIP
 exit. Thus resolution retains a consistent, covered candidate-inclusive trail;
 finite-loop exhaustion is excluded by that actual marked return. -/
-theorem resolveToUIP_trail {formula : CNF Nat} {snapshot : State} {count decision : Nat}
+theorem resolveToUIP_trail {formula : Std.Sat.CNF Nat} {snapshot : State} {count decision : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (block : DecisionBlock snapshot decision count) (s : State)
     (storage : ReasonStorage snapshot s) (trail : s.trail = snapshot.trail)

@@ -9,7 +9,7 @@ open Std.Sat
 
 /-- An active reason has false tails, so a successful scan of a genuine long
 clause can never select that clause as a replacement target. -/
-theorem replacement_not_active_reason {s : State} {formula : CNF Nat} {count : Nat} {rank : Lit → Nat}
+theorem replacement_not_active_reason {s : State} {formula : Std.Sat.CNF Nat} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula s count rank) (active : ActiveTrail s) (countActive : count ≤ s.assigned)
     {id : Nat} {lits : Array Lit} (packed : PackedClause s id lits) (wide : 2 ≤ lits.size)
     (lit : Lit) {pos : Nat} (found : replacement (orientWatch s.arena id lit) s.marks id = some pos)
@@ -29,7 +29,7 @@ theorem replacement_not_active_reason {s : State} {formula : CNF Nat} {count : N
 /-- Successful actual replacement and header rewiring preserve the complete
 reason DAG: active reason IDs are genuine, and the target cannot equal one.
 No active reason clause is permitted to be arbitrarily permuted. -/
-theorem replacement_branch_reasonGraph {s : State} {formula : CNF Nat} {count : Nat} {rank : Lit → Nat}
+theorem replacement_branch_reasonGraph {s : State} {formula : Std.Sat.CNF Nat} {count : Nat} {rank : Lit → Nat}
     {original learned : List StoredClause} (database : Database s original learned)
     (meaning : DatabaseMeaning formula original learned) (graph : ReasonGraph formula s count rank)
     (active : ActiveTrail s) (countActive : count ≤ s.assigned)

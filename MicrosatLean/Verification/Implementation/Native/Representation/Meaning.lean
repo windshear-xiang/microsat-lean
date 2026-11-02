@@ -32,24 +32,24 @@ theorem databaseView_sat_iff (entries : List StoredClause) (a : Nat → Bool) :
 
 /-- The original database represents the input exactly; every retained learned
 clause follows from the input. Forgetting such clauses does not change models. -/
-structure DatabaseMeaning (formula : CNF Nat) (original learned : List StoredClause) : Prop where
+structure DatabaseMeaning (formula : Std.Sat.CNF Nat) (original learned : List StoredClause) : Prop where
   original : CNF.BiEntails formula (databaseView original)
   learned : CNF.Entails formula (databaseView learned)
 
-theorem DatabaseMeaning.combined {formula : CNF Nat} {original learned : List StoredClause}
+theorem DatabaseMeaning.combined {formula : Std.Sat.CNF Nat} {original learned : List StoredClause}
     (meaning : DatabaseMeaning formula original learned) :
     CNF.BiEntails formula (databaseView (original ++ learned)) := by
   rw [databaseView_append]
   exact ⟨CNF.entails_append_of_entails meaning.original.1 meaning.learned,
     CNF.entails_trans CNF.append_entails_left meaning.original.2⟩
 
-theorem DatabaseMeaning.entails_entry {formula : CNF Nat} {original learned : List StoredClause}
+theorem DatabaseMeaning.entails_entry {formula : Std.Sat.CNF Nat} {original learned : List StoredClause}
     (meaning : DatabaseMeaning formula original learned) {entry : StoredClause}
     (member : entry ∈ original ++ learned) : CNF.EntailsClause formula entry.view := by
   intro a model
   exact (databaseView_sat_iff _ a).mp (meaning.combined.1 a model) entry member
 
-theorem DatabaseMeaning.addLearned {formula : CNF Nat} {original learned : List StoredClause}
+theorem DatabaseMeaning.addLearned {formula : Std.Sat.CNF Nat} {original learned : List StoredClause}
     (meaning : DatabaseMeaning formula original learned) (entry : StoredClause)
     (entailed : CNF.EntailsClause formula entry.view) :
     DatabaseMeaning formula original (learned ++ [entry]) := by
@@ -60,7 +60,7 @@ theorem DatabaseMeaning.addLearned {formula : CNF Nat} {original learned : List 
 /-- Clause identifiers may be relocated during compaction. Only their literal
 views matter to model preservation; the runtime compactor must prove this
 retained-view inclusion independently. -/
-theorem DatabaseMeaning.forgetLearned {formula : CNF Nat}
+theorem DatabaseMeaning.forgetLearned {formula : Std.Sat.CNF Nat}
     {original oldLearned newLearned : List StoredClause}
     (meaning : DatabaseMeaning formula original oldLearned)
     (retained : newLearned.map StoredClause.view ⊆ oldLearned.map StoredClause.view) :

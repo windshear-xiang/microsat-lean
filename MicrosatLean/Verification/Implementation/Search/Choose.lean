@@ -21,7 +21,7 @@ theorem choose : PhaseCorrect .choose := by
     Native.Analysis.LevelCover s ∧ Native.Analysis.SixBefore s ∧
     Native.Propagation.SettledPrefix s _ w.heads s.processed at facts
   have settled : Native.Propagation.SettledWatches s
-      (w.original.map toNativeEntry ++ w.learned.map toNativeEntry) w.heads s.assigned := by
+      (w.original ++ w.learned) w.heads s.assigned := by
     simpa only [Native.Propagation.SettledPrefix, Native.Propagation.SettledWatches, facts.1]
       using facts.2.2.2.2.2
   have closed := Native.Propagation.prefixUnitClosed_of_settled native.base.active (Nat.le_refl _)

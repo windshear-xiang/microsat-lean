@@ -25,7 +25,7 @@ theorem native_analyze_trace {input : CNF} {s : CDCL.State}
     apply LogicalMove.learn
     · exact ready.entailed
     · intro lit member
-      obtain ⟨encoded, contains, same⟩ := Native.clauseView_mem.mp member
+      obtain ⟨encoded, contains, same⟩ := MicrosatLean.Verification.clauseView_mem.mp member
       rw [← same]
       have bound := ready.packed.wellFormed encoded contains
       change 0 < encoded.var ∧ encoded.var ≤ s.nVars
@@ -79,7 +79,7 @@ theorem native_analysis_assert_trace {input : CNF} {s : CDCL.State}
   · exact nativeState_fresh
       (Native.Analysis.freshVariable_of_unmarked_literal ready.active ready.head ready.opposite)
   · intro lit contains
-    have words : added.view.literals = added.lits.toList.map literalView := Native.clauseView_literals _
+    have words : added.view.literals = added.lits.toList.map literalView := MicrosatLean.Verification.clauseView_literals _
     rw [words] at contains
     obtain ⟨j, beforeTail, value⟩ := List.mem_iff_getElem.mp contains
     have beforeWord : j + 1 < added.lits.size := by

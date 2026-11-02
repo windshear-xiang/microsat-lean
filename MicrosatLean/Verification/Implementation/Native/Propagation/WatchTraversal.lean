@@ -19,7 +19,7 @@ def SettledWatchReturn (after : Machine) (entries : List StoredClause)
 /-- Every actual watch return that does not learn a clause preserves the
 genuine database/watch certificate and concretely advances settlement. The
 learned counter excludes analysis here; its branch is handled separately. -/
-theorem propagateWatches_settled {formula : CNF Nat} (s : State)
+theorem propagateWatches_settled {formula : Std.Sat.CNF Nat} (s : State)
     (decision oldLemmas : Nat) (root : Bool) (lit : Lit)
     (remaining : List Nat) (fuel : Nat) (arena first : Array Nat) (previous : Nat)
     {original learned : List StoredClause} {heads : Nat → List Nat} {count : Nat}

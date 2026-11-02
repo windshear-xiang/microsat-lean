@@ -21,7 +21,7 @@ private theorem retained_source {s : State} {original learned kept : List Stored
 
 /-- Every normalization property is transferred through exact literal
 equality, while canonical learned keys form a subsequence of the old keys. -/
-theorem StateCertificate.reduceDB_with_relocation {formula : CNF Nat} {s : State}
+theorem StateCertificate.reduceDB_with_relocation {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (root : s.assigned = s.forced) (k : Nat) :
@@ -64,7 +64,7 @@ theorem StateCertificate.reduceDB_with_relocation {formula : CNF Nat} {s : State
     exact (sublist.map (fun entry => canonicalKey s.nVars entry.lits)).nodup certificate.learnedDistinct
 
 /-- The full base certificate survives actual root database reduction. -/
-theorem StateCertificate.reduceDB {formula : CNF Nat} {s : State}
+theorem StateCertificate.reduceDB {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (root : s.assigned = s.forced) (k : Nat) :
@@ -72,7 +72,7 @@ theorem StateCertificate.reduceDB {formula : CNF Nat} {s : State}
   obtain ⟨kept, newHeads, result, _, _⟩ := certificate.reduceDB_with_relocation root k
   exact ⟨kept, newHeads, result⟩
 
-theorem HasStateCertificate.reduceDB {formula : CNF Nat} {s : State}
+theorem HasStateCertificate.reduceDB {formula : Std.Sat.CNF Nat} {s : State}
     (certificate : HasStateCertificate formula s) (root : s.assigned = s.forced) (k : Nat) :
     HasStateCertificate formula (s.reduceDB k) := by
   obtain ⟨original, learned, heads, rank, certificate⟩ := certificate

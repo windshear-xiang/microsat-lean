@@ -11,7 +11,7 @@ open CDCL Representation Propagation Analysis Std.Sat
 watch continuation. Preservation of the base certificate supplies the finite
 learned bound, and the actual effect classification then decreases the rank.
 The global proof must still establish that certificate preservation. -/
-theorem step_watch_rank {formula : CNF Nat} {before after : Machine}
+theorem step_watch_rank {formula : Std.Sat.CNF Nat} {before after : Machine}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (phase : before.phase = .watch) (running : step before = .running after)
     (certificate : StateCertificate formula before.solver original learned heads rank)
@@ -20,7 +20,7 @@ theorem step_watch_rank {formula : CNF Nat} {before after : Machine}
     (literal : LiteralBound before.solver.nVars before.currentLit)
     (falseLit : before.solver.mark before.currentLit ≠ 0)
     (remaining : List Nat) (cursor : WatchCursor heads before.currentLit before.previousWatch remaining) :
-    ControlRankLT (controlRank (3 ^ variables) variables after)
+    RankLT (controlRank (3 ^ variables) variables after)
       (controlRank (3 ^ variables) variables before) := by
   rcases before with ⟨s, decision, phase, old, root, lit, previous⟩
   simp only at phase variablesEq certificate literal falseLit cursor

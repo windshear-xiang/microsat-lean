@@ -8,7 +8,7 @@ open CDCL Representation Propagation Analysis Std.Sat
 
 /-- Initial assignments are all input-entailed units. Their reasons have an
 exact head and no tail, rather than merely containing the true literal. -/
-def InitialUnitReasons (formula : CNF Nat) (s : State) : Prop :=
+def InitialUnitReasons (formula : Std.Sat.CNF Nat) (s : State) : Prop :=
   ∀ i, i < s.assigned → ∃ lits,
     PackedClause s (s.reason s.trail[i]!) lits ∧ lits.size = 1 ∧
       lits[0]! = s.trail[i]!.negate ∧ CNF.EntailsClause formula (clauseView lits)
@@ -16,13 +16,13 @@ def InitialUnitReasons (formula : CNF Nat) (s : State) : Prop :=
 /-- Initialization uses only the unassigned and unconditional-root tags. -/
 def InitialTags (s : State) : Prop := ∀ lit, s.mark lit = 0 ∨ s.mark lit = 6
 
-structure InitialAnalysisData (formula : CNF Nat) (s : State) : Prop where
+structure InitialAnalysisData (formula : Std.Sat.CNF Nat) (s : State) : Prop where
   units : InitialUnitReasons formula s
   tags : InitialTags s
   processed : s.processed = 0
   forced : s.forced = 0
 
-theorem emptyState_analysisData (numVars : Nat) (config : Config) (formula : CNF Nat) :
+theorem emptyState_analysisData (numVars : Nat) (config : Config) (formula : Std.Sat.CNF Nat) :
     InitialAnalysisData formula (emptyState numVars config) := by
   constructor
   · intro i before
@@ -32,7 +32,7 @@ theorem emptyState_analysisData (numVars : Nat) (config : Config) (formula : CNF
   · rfl
   · rfl
 
-theorem InitialAnalysisData.addClause {formula : CNF Nat} {s : State}
+theorem InitialAnalysisData.addClause {formula : Std.Sat.CNF Nat} {s : State}
     (data : InitialAnalysisData formula s) (lits : Array Lit) (original : Bool) :
     InitialAnalysisData formula (s.addClause lits original).1 := by
   constructor
@@ -45,7 +45,7 @@ theorem InitialAnalysisData.addClause {formula : CNF Nat} {s : State}
   · simpa only [addClause_processed] using data.processed
   · simpa only [addClause_forced] using data.forced
 
-theorem InitialAnalysisData.assign {formula : CNF Nat} {s : State} {id : Nat}
+theorem InitialAnalysisData.assign {formula : Std.Sat.CNF Nat} {s : State} {id : Nat}
     {lits : Array Lit} (data : InitialAnalysisData formula s) (valid : InitializedRepresentation s)
     (packed : PackedClause s id lits) (unit : lits.size = 1)
     (entailed : CNF.EntailsClause formula (clauseView lits))

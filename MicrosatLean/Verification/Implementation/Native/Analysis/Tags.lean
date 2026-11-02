@@ -70,7 +70,7 @@ private theorem TagFacts.setAssigned {snapshot s : State} {count roots : Nat}
   · exact Or.inl six
   · exact Or.inr ⟨Nat.le_trans earlier popped, zero⟩
 
-private theorem TagFacts.unassign {formula : CNF Nat} {snapshot s : State} {count roots : Nat}
+private theorem TagFacts.unassign {formula : Std.Sat.CNF Nat} {snapshot s : State} {count roots : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (facts : TagFacts snapshot count roots s) (p : Nat) (before : p < count)
     (candidate : s.assigned = p) : TagFacts snapshot count roots (s.unassign snapshot.trail[p]!) := by
@@ -88,7 +88,7 @@ private theorem TagFacts.unassign {formula : CNF Nat} {snapshot s : State} {coun
   · rw [unassign_mark_other same]
     exact facts.boundary i root inRange
 
-private theorem TagFacts.expandReason {formula : CNF Nat} {snapshot s : State} {count roots : Nat}
+private theorem TagFacts.expandReason {formula : Std.Sat.CNF Nat} {snapshot s : State} {count roots : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (facts : TagFacts snapshot count roots s) (p : Nat) (before : p < count)
     (candidate : s.assigned = p) (nondecision : s.reason snapshot.trail[p]! ≠ 0) :
@@ -120,7 +120,7 @@ private theorem TagFacts.expandReason {formula : CNF Nat} {snapshot s : State} {
     rw [markClause_mark_outside packedCurrent facts.arrays 1 inside outside]
     exact zero
 
-private theorem resolutionBody_tags {formula : CNF Nat} {snapshot s : State} {count roots : Nat}
+private theorem resolutionBody_tags {formula : Std.Sat.CNF Nat} {snapshot s : State} {count roots : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (facts : TagFacts snapshot count roots s) (positive : 0 < s.assigned) (bound : s.assigned ≤ count) :
     TagFacts snapshot count roots (resolutionBody s).value := by
@@ -149,7 +149,7 @@ private theorem resolutionBody_tags {formula : CNF Nat} {snapshot s : State} {co
         simpa only [← read, ForInStep.value_yield] using cleared
     · simpa only [← read, ForInStep.value_yield] using popFacts.unassign graph p pBound rfl
 
-private theorem resolutionScan_tags {formula : CNF Nat} {snapshot : State} {count roots : Nat}
+private theorem resolutionScan_tags {formula : Std.Sat.CNF Nat} {snapshot : State} {count roots : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank) (fuel : Nat) (s : State)
     (facts : TagFacts snapshot count roots s) (assigned : s.assigned = fuel) (bound : fuel ≤ count) :
     TagFacts snapshot count roots (resolutionScan fuel s) := by
@@ -168,7 +168,7 @@ private theorem resolutionScan_tags {formula : CNF Nat} {snapshot : State} {coun
 
 /-- Actual resolution preserves legal mark tags. An original root can only
 keep tag six or be cleared after it is popped; it never becomes a MARK leaf. -/
-theorem resolveToUIP_tags {formula : CNF Nat} {snapshot : State} {count roots : Nat} {rank : Lit → Nat}
+theorem resolveToUIP_tags {formula : Std.Sat.CNF Nat} {snapshot : State} {count roots : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (s : State)
     (storage : ReasonStorage snapshot s) (trail : s.trail = snapshot.trail)
     (vars : s.nVars = snapshot.nVars) (arrays : ArrayBounds s)
@@ -181,7 +181,7 @@ theorem resolveToUIP_tags {formula : CNF Nat} {snapshot : State} {count roots : 
 
 /-- Unconditional root consequences establish initial tag-six cache validity
 for minimization, irrespective of the frozen MARK-leaf assumptions. -/
-theorem RootTagConsequences.impliedCache {formula : CNF Nat} {snapshot s : State} {count : Nat}
+theorem RootTagConsequences.impliedCache {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     (root : RootTagConsequences formula snapshot count s) (tags : ValidMarkTags snapshot count s)
     (marked : ∀ lit, TrailMember snapshot count lit → s.mark lit = 2 → leaves lit) :

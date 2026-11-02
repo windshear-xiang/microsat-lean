@@ -20,9 +20,9 @@ theorem nativeTrail_decide {s : CDCL.State} {entries : List NEntry} {var : Nat}
       rw [Native.Representation.decide_trail_prefix before]
       exact Native.Analysis.decide_reason_prefix fresh before
   · rw [Native.Representation.decide_trail_last space]
-    change (Native.literalView (Native.Representation.decisionLiteral s var).negate).negate =
-      Native.literalView (Native.Representation.decisionLiteral s var)
-    rw [Native.literalView_negate]
+    change (MicrosatLean.Verification.literalView (Native.Representation.decisionLiteral s var).negate).negate =
+      MicrosatLean.Verification.literalView (Native.Representation.decisionLiteral s var)
+    rw [MicrosatLean.Verification.literalView_negate]
     simp only [Std.Sat.Literal.negate, Bool.not_not]
   · simp only [nativeReason, Native.Representation.decide_trail_last space,
       Native.Search.decide_reason_at_decision, ↓reduceIte]
@@ -50,7 +50,7 @@ theorem closed_from_native {formula : Formula} {m : CDCL.Machine}
   have result := unitClosed_fromNative represented (Nat.le_refl _) (closed entry contained)
   rw [← represented.trailLength] at result
   simpa only [prefixLiterals, List.take_length, LogicalState.trueTrail,
-    Native.Representation.StoredClause.view, native_clauseView_eq] using result
+    Native.Representation.StoredClause.view] using result
 
 /-- The phase-saving decision appends one fresh assumption, after completed
 propagation of every stored clause. -/

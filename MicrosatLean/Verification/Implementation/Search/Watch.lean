@@ -67,12 +67,12 @@ theorem watch : PhaseCorrect .watch := by
   have trace := step_watch_trace concrete phase
   obtain ⟨order, ordered⟩ := concrete.base.order
   have initial : a = nativeState machine.solver
-      (w.original.map toNativeEntry) (w.learned.map toNativeEntry) :=
+      (w.original) (w.learned) :=
     rep_unique certificate.representation (native_rep concrete.base ordered)
   cases result : step machine with
   | running after =>
     have endpoint : WatchTrace formula (nativeState machine.solver
-        (w.original.map toNativeEntry) (w.learned.map toNativeEntry)) (.running after) := by
+        (w.original) (w.learned)) (.running after) := by
       rw [← result]
       exact trace
     obtain ⟨original, learned, heads, rank, base, execution⟩ := endpoint
@@ -91,7 +91,7 @@ theorem watch : PhaseCorrect .watch := by
     exact execution
   | finished answer =>
     have endpoint : WatchTrace formula (nativeState machine.solver
-        (w.original.map toNativeEntry) (w.learned.map toNativeEntry)) (.finished answer) := by
+        (w.original) (w.learned)) (.finished answer) := by
       rw [← result]
       exact trace
     change FinishedPost formula a answer

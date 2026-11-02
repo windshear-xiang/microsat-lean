@@ -10,7 +10,7 @@ consequence, as witnessed by its genuine tag-six trail entry. -/
 def RootWatchTrail (s : State) (root : Bool) : Prop :=
   root = true → ∀ i, i < s.assigned → s.mark s.trail[i]! = 6
 
-theorem StateCertificate.root_unit_consequence {formula : CNF Nat} {s : State}
+theorem StateCertificate.root_unit_consequence {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     {entry : StoredClause} (member : entry ∈ original ++ learned)
@@ -25,7 +25,7 @@ theorem StateCertificate.root_unit_consequence {formula : CNF Nat} {s : State}
 
 /-- A failed actual replacement and the two unmarked-other tests supply all
 semantic and structural premises of the real unit assignment. -/
-theorem StateCertificate.watchUnit {formula : CNF Nat} {s : State}
+theorem StateCertificate.watchUnit {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     {lit : Lit} {ref : Nat} (current : ref ∈ heads lit) (falseLit : s.mark lit ≠ 0)

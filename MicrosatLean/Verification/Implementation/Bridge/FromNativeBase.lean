@@ -8,7 +8,7 @@ private abbrev NativeEntry := Native.Representation.StoredClause
 
 def nativeWitness (original learned : List NativeEntry) (heads : Lit → List Nat)
     (order : List Nat) : RepresentationWitness :=
-  ⟨original.map fromNativeEntry, learned.map fromNativeEntry, heads, order⟩
+  ⟨original, learned, heads, order⟩
 
 def nativeReason (s : CDCL.State) (entries : List NativeEntry) (i : Nat) : Option Clause :=
   if s.reason s.trail[i]! = 0 then none
@@ -64,14 +64,7 @@ theorem nativeReason_none_iff {s : CDCL.State} {entries : List NativeEntry}
 
 theorem native_layout {s : CDCL.State} {start : Nat} {entries : List NativeEntry}
     (layout : Native.Representation.DatabaseFrom s start entries) :
-    DatabaseFrom s start (entries.map fromNativeEntry) := by
-  induction entries generalizing start with
-  | nil => exact layout
-  | cons entry rest ih =>
-    obtain ⟨id, packed, tail⟩ := layout
-    exact ⟨id, ⟨packed.startLower, packed.endBound, packed.literals, packed.terminator,
-      fun lit member => ⟨by have := (packed.wellFormed lit member).1; omega,
-        (packed.wellFormed lit member).2⟩⟩, ih tail⟩
+    DatabaseFrom s start (entries) := layout
 
 private theorem getD_mem {α : Type} [Inhabited α] (items : List α) (i : Nat)
     (before : i < items.length) : items.getD i default ∈ items := by
@@ -85,20 +78,20 @@ theorem native_rep {input : CNF} {m : CDCL.Machine}
     Rep m (nativeState m.solver original learned) (nativeWitness original learned heads order) := by
   let s := m.solver
   let entries := original ++ learned
-  have members : (nativeWitness original learned heads order).entries = entries.map fromNativeEntry := by
+  have members : (nativeWitness original learned heads order).entries = entries := by
     simp [nativeWitness, RepresentationWitness.entries, entries]
   have size := base.database.layout.size
   refine ⟨rfl, ⟨base.arrays.firstSize, base.arrays.marksSize, base.arrays.reasonsSize,
     base.arrays.phasesSize, base.arrays.trailSize, base.arrays.previousSize, base.arrays.nextSize⟩,
     by omega, ?_, ?_, by simpa [nativeWitness] using base.database.learnedCount,
-    by simp only [nativeState, nativeWitness, List.map_map]; rfl,
-    by simp only [nativeState, nativeWitness, List.map_map]; rfl,
+    rfl,
+    rfl,
     nativeTrail_length _ _, rfl,
     ⟨base.bounds.forcedProcessed, base.bounds.processedAssigned, base.bounds.assignedVars⟩,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · rw [members]
     exact native_layout base.database.layout
-  · simpa only [nativeWitness, List.map_map, fromNativeEntry, Function.comp_def]
+  · simpa only [nativeWitness, List.map_map, Function.comp_def]
       using base.database.fixed
   · intro i before
     exact congrArg TrailEntry.literal (nativeTrail_get _ _ before)
@@ -134,35 +127,10 @@ theorem native_rep {input : CNF} {m : CDCL.Machine}
       exact zero
     · obtain ⟨entry, member, id, selected⟩ := nativeReason_some base.reasons before zero
       rw [selected]
-      exact ⟨fromNativeEntry entry, by rw [members]; exact List.mem_map.mpr ⟨entry, member, rfl⟩,
+      exact ⟨entry, by rw [members]; exact member,
         id.symm, rfl⟩
-  · constructor
-    · intro lit
-      have links := base.watches.links lit
-      refine ⟨links.1, links.2.1, ?_⟩
-      intro i before
-      let ref := (heads lit).getD i 0
-      have member : ref ∈ heads lit := getD_mem (heads lit) i before
-      have proper := base.watches.references lit ref member
-      obtain ⟨entry, stored, id, _⟩ := proper
-      have lower := (base.database.layout.packed stored).startLower
-      refine ⟨?_, Native.Propagation.storedWatchRef_link_bound base.database
-        (base.watches.references lit ref member), links.2.2 i before⟩
-      intro zero
-      change ref = 0 at zero
-      change CDCL.watchClause ref = entry.id at id
-      rw [zero] at id
-      simp only [CDCL.watchClause, Nat.zero_div] at id
-      omega
-    · intro lit ref member
-      obtain ⟨entry, stored, id, width⟩ := base.watches.references lit ref member
-      exact ⟨fromNativeEntry entry, by rw [members]; exact List.mem_map.mpr ⟨entry, stored, rfl⟩,
-        id, width⟩
-    · intro entry stored width
-      rw [members] at stored
-      obtain ⟨old, member, rfl⟩ := List.mem_map.mp stored
-      exact base.watches.covered old member width
-    · exact base.watches.unique
+  · simpa only [WatchRepresentation, nativeWitness, RepresentationWitness.entries,
+      List.map_id] using base.watches
   · refine ⟨ordered.1, ?_, ordered.2.2.1, ordered.2.2.2⟩
     intro var
     simpa only [nativeWitness, Nat.lt_iff_add_one_le, Nat.zero_add] using ordered.2.1 var

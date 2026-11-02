@@ -80,7 +80,7 @@ theorem retainWatch_database {s : State} {original learned : List StoredClause}
     have test : (s.arena[entry.id]! == lit) = false := by simp [firstArray]
     simpa only [State.db, test, Bool.false_eq_true, ite_false, retainWatchEntry_false, List.map_id'] using database
 
-theorem retainWatch_databaseMeaning {formula : CNF Nat} {original learned : List StoredClause}
+theorem retainWatch_databaseMeaning {formula : Std.Sat.CNF Nat} {original learned : List StoredClause}
     (meaning : DatabaseMeaning formula original learned) (id : Nat) (first : Bool) :
     DatabaseMeaning formula (original.map (retainWatchEntry id first))
       (learned.map (retainWatchEntry id first)) := by
@@ -128,7 +128,7 @@ private theorem fresh_of_unmarked_pair {s : State} {lit : Lit} (active : ActiveT
 /-- Retaining a watch changes only arena order. Thus it changes no previous
 semantic dependency, and a concrete failed scan establishes the new unit
 dependency rather than assuming that dependency of the poststate. -/
-theorem watch_unit_preserves {s : State} {formula : CNF Nat} {original learned : List StoredClause}
+theorem watch_unit_preserves {s : State} {formula : Std.Sat.CNF Nat} {original learned : List StoredClause}
     (database : Database s original learned) (meaning : DatabaseMeaning formula original learned)
     (coverage : MarkedOnTrail s) (active : ActiveTrail s) (reasons : ReasonConsequences formula s)
     {entry : StoredClause} (member : entry ∈ original ++ learned) (lit : Lit) (root : Bool)

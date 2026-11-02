@@ -28,7 +28,7 @@ theorem DecisionHistory.unit_true {s : State} {entries : List StoredClause}
 /-- Saved predecision closure forces every nondecision in this level to
 depend on an earlier assignment in the same level. Otherwise its reason
 would already have forced its head before this decision. -/
-theorem DecisionHistory.reasonLevelParent {formula : CNF Nat} {s : State}
+theorem DecisionHistory.reasonLevelParent {formula : Std.Sat.CNF Nat} {s : State}
     {entries : List StoredClause} {rank : Lit → Nat} (history : DecisionHistory s entries)
     (graph : ReasonGraph formula s s.assigned rank) (proper : ReasonDatabase s entries)
     (stored : ∀ entry ∈ entries, PackedClause s entry.id entry.lits)
@@ -180,7 +180,7 @@ theorem LevelCover.assign {s : State} (cover : LevelCover s) (id : Nat) (root : 
   rw [assign_trail_prefix (by omega : decision < s.assigned), assign_reason_prefix fresh (by omega)]
   exact zero
 
-theorem LevelCover.analyze {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem LevelCover.analyze {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat} (cover : LevelCover s)
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) :
     LevelCover (CDCL.analyze s conflict).1 := by

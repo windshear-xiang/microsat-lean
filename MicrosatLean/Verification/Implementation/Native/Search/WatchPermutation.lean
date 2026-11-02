@@ -14,7 +14,7 @@ theorem canonicalKey_perm (n : Nat) {left right : Array Lit} (perm : left.Perm r
 theorem noClash_perm {left right : Array Lit} (perm : left.Perm right)
     (noClash : Logic.ClauseSpace.NoClash (viewedLiterals right)) :
     Logic.ClauseSpace.NoClash (viewedLiterals left) := by
-  have same (lit : Literal Nat) : lit ∈ viewedLiterals left ↔ lit ∈ viewedLiterals right :=
+  have same (lit : Std.Sat.Literal Nat) : lit ∈ viewedLiterals left ↔ lit ∈ viewedLiterals right :=
     ((Array.perm_iff_toList_perm.mp perm).map literalView).mem_iff
   intro var positive negative
   exact noClash var ((same _).mp positive) ((same _).mp negative)
@@ -22,7 +22,7 @@ theorem noClash_perm {left right : Array Lit} (perm : left.Perm right)
 /-- Watch-array writes leave assignment data intact. Concrete operation
 lemmas supply the new packed database, linked watches, and exact reason slices;
 literal permutations preserve the normalization and learned-key invariants. -/
-theorem StateCertificate.watchArrays {formula : CNF Nat} {s : State}
+theorem StateCertificate.watchArrays {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (arena first : Array Nat) (firstSize : first.size = s.first.size)

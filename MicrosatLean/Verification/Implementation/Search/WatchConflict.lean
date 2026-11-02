@@ -34,7 +34,7 @@ theorem root_conflict_trace {formula : Formula} {s : State}
       rw [nativeState_database]
       exact List.mem_map.mpr ⟨entry, stored, rfl⟩
     · intro lit member
-      obtain ⟨encoded, contained, equal⟩ := Native.clauseView_mem.mp member
+      obtain ⟨encoded, contained, equal⟩ := MicrosatLean.Verification.clauseView_mem.mp member
       rw [← equal]
       have falseBefore := (falseBefore_iff rep (Nat.le_refl s.assigned) encoded).mpr
         (base.marked encoded (falseClause encoded contained))
@@ -42,6 +42,6 @@ theorem root_conflict_trace {formula : Formula} {s : State}
           nativeTrail s (original ++ learned) :=
         List.take_of_length_le (by simp only [nativeTrail_length, Nat.le_refl])
       simpa only [FalseBefore, prefixLiterals, before, nativeState, nativeTrail_length, List.take_length,
-        after, LogicalState.trueTrail, whole, native_view_eq] using falseBefore
+        after, LogicalState.trueTrail, whole] using falseBefore
 
 end MicrosatLean.Verification.Implementation.Search

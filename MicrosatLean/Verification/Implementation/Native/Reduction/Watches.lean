@@ -180,7 +180,7 @@ theorem reduceDB_watchCertificate {s : State} {original learned kept : List Stor
 
 /-- One shared kept database witnesses actual reduction semantics, reason
 relocation, reason DAG validity, array bounds and the complete watch layout. -/
-theorem reduceDB_reasons_and_watches {formula : CNF Nat} {s : State}
+theorem reduceDB_reasons_and_watches {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (database : Database s original learned) (meaning : DatabaseMeaning formula original learned)
     (certificate : WatchCertificate s (original ++ learned) heads)

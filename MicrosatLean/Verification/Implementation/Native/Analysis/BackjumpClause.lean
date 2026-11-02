@@ -330,7 +330,7 @@ private theorem learned_support_finish {allowed : Lit → Prop} {source current 
     | exact facts.markSupport (markSupport_setMark _ _ 1 member (by decide))
     | exact (facts.setProcessed p).markSupport (markSupport_setMark _ _ 1 member (by decide))
 
-private theorem learned_support_step {formula : CNF Nat} {snapshot source : State} {count : Nat}
+private theorem learned_support_step {formula : Std.Sat.CNF Nat} {snapshot source : State} {count : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (storage : ReasonStorage snapshot source) (trail : source.trail = snapshot.trail)
     (candidate offset : Nat) (candidateBound : candidate < count)
@@ -355,7 +355,7 @@ private theorem learned_support_step {formula : CNF Nat} {snapshot source : Stat
     split <;> exact learned_support_finish next _ _ member _ _ _
   · exact learned_support_finish facts _ _ member _ _ _
 
-private theorem learned_support_loop {formula : CNF Nat} {snapshot source : State} {count : Nat}
+private theorem learned_support_loop {formula : Std.Sat.CNF Nat} {snapshot source : State} {count : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (storage : ReasonStorage snapshot source) (trail : source.trail = snapshot.trail)
     (candidate : Nat) (candidateBound : candidate < count) (fuel start : Nat)
@@ -376,7 +376,7 @@ private theorem learned_support_loop {formula : CNF Nat} {snapshot source : Stat
 
 /-- Actual learned construction never clears a nonzero mark, and changes no
 literal outside the concrete reason snapshot. Cursor changes are immaterial. -/
-theorem buildLearned_markSupport {formula : CNF Nat} {snapshot s : State} {count : Nat}
+theorem buildLearned_markSupport {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (storage : ReasonStorage snapshot s) (trail : s.trail = snapshot.trail)
     (candidate : Nat) (candidateBound : candidate < count) :
@@ -393,7 +393,7 @@ theorem buildLearned_markSupport {formula : CNF Nat} {snapshot s : State} {count
 
 /-- The actual minimizer keeps the candidate-inclusive false trail consistent:
 all false tags stay nonzero and their opposite literals are outside its writes. -/
-theorem buildLearned_activeTrail {formula : CNF Nat} {snapshot s : State} {count : Nat}
+theorem buildLearned_activeTrail {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (storage : ReasonStorage snapshot s) (trail : s.trail = snapshot.trail)
     (candidate : Nat) (candidateBound : candidate < count)
@@ -423,7 +423,7 @@ theorem buildLearned_activeTrail {formula : CNF Nat} {snapshot s : State} {count
 /-- With the retained UIP identified, the real backjump clears both head
 polarities, retains every tail as a false active literal, and frees the head's
 variable for the next actual asserting assignment. -/
-theorem buildLearned_backjump_asserting {formula : CNF Nat} {snapshot s : State} {count : Nat}
+theorem buildLearned_backjump_asserting {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (storage : ReasonStorage snapshot s) (trail : s.trail = snapshot.trail)
     (candidate : Nat) (candidateBound : candidate < count) (lower : s.forced ≤ candidate)
@@ -481,7 +481,7 @@ theorem buildLearned_nodup (s : State) (candidate : Nat) (rank : Lit → Nat)
       omega
     · omega
 
-theorem buildLearned_variables_nodup {formula : CNF Nat} {snapshot s : State} {count : Nat}
+theorem buildLearned_variables_nodup {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (trail : s.trail = snapshot.trail) (candidate : Nat) (candidateBound : candidate < count)
     (lower : s.forced ≤ candidate) :

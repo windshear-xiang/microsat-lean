@@ -4,7 +4,7 @@ namespace MicrosatLean.Verification.Implementation.Native.Analysis
 
 open CDCL Representation Std.Sat
 
-theorem DecisionAnalysisEntry.minimizer_false {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem DecisionAnalysisEntry.minimizer_false {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) :
     let resolved := analysisResolved s conflict
@@ -26,7 +26,7 @@ theorem DecisionAnalysisEntry.minimizer_false {formula : CNF Nat} {s : State} {c
 /-- The actual backjump never stops inside the current level. A singleton
 would have scanned its decision; a nonsingleton's highest tail is below the
 current decision and the exact cursor gap contains no intervening decision. -/
-theorem analyze_cursor_le_decision {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem analyze_cursor_le_decision {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) :
     (CDCL.analyze s conflict).1.assigned ≤ decision := by
@@ -70,7 +70,7 @@ theorem analyze_cursor_le_decision {formula : CNF Nat} {s : State} {conflict dec
 
 /-- The real retained prefix ends at a genuine old decision boundary. This
 is the chronology fact needed to recover saved predecision watch witnesses. -/
-theorem analyze_decision_boundary {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem analyze_decision_boundary {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision) :
     s.forced ≤ (CDCL.analyze s conflict).1.assigned ∧
@@ -105,7 +105,7 @@ theorem analyze_decision_boundary {formula : CNF Nat} {s : State} {conflict deci
 
 /-- A singleton actual learned clause clears every nonroot level. Concrete
 level cover excludes an unaccounted nondecision-only retained suffix. -/
-theorem analyze_unit_root_prefix {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem analyze_unit_root_prefix {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat} (cover : LevelCover s)
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision)
     (unit : (analysisLearned s conflict).size = 1) :
@@ -141,7 +141,7 @@ theorem analyze_unit_root_prefix {formula : CNF Nat} {s : State} {conflict decis
 
 /-- The highest learned tail lies at or above every decision that the real
 backjump retains. Its original trail position is itself retained. -/
-theorem analyze_highest_tail_after_decision {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem analyze_highest_tail_after_decision {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat}
     (entry : DecisionAnalysisEntry formula s conflict lits rank decision)
     (many : 1 < (analysisLearned s conflict).size) (older : Nat)

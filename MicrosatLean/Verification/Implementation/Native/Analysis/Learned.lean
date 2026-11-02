@@ -69,7 +69,7 @@ private theorem rangeList_invariant {β : Type} (body : Nat → β → Id (ForIn
       (by simpa only [hb, ForInStep.value_yield] using next)
     simpa only [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using tail
 
-private structure LearnedContext (formula : CNF Nat) (snapshot : State) (count : Nat)
+private structure LearnedContext (formula : Std.Sat.CNF Nat) (snapshot : State) (count : Nat)
     (rank : Lit → Nat) (leaves : Lit → Prop) where
   graph : ReasonGraph formula snapshot count rank
   candidate : Nat
@@ -78,7 +78,7 @@ private structure LearnedContext (formula : CNF Nat) (snapshot : State) (count :
   leafRange : ∀ lit, leaves lit →
     TrailMember snapshot count lit ∧ lower ≤ rank lit ∧ rank lit ≤ candidate
 
-private structure LearnedInv {formula : CNF Nat} {snapshot : State} {count : Nat}
+private structure LearnedInv {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     (c : LearnedContext formula snapshot count rank leaves) (offset : Nat) (acc : LearnedAcc) : Prop where
   storage : ReasonStorage snapshot acc.1
@@ -89,7 +89,7 @@ private structure LearnedInv {formula : CNF Nat} {snapshot : State} {count : Nat
     lit ∈ acc.2.1 ∨ DerivedLiteral formula rank leaves lit
   retained : ∀ lit ∈ acc.2.1, leaves lit
 
-private theorem LearnedInv.retuple {formula : CNF Nat} {snapshot : State} {count : Nat}
+private theorem LearnedInv.retuple {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     {c : LearnedContext formula snapshot count rank leaves} {offset : Nat} {acc : LearnedAcc}
     (inv : LearnedInv c offset acc) (p lbd : Nat) (used : Bool) :
@@ -136,7 +136,7 @@ theorem learnedBody_yields (candidate offset : Nat) (acc : LearnedAcc) :
   dsimp only
   split <;> exact finishBody_yields ..
 
-private theorem finishBody_inv {formula : CNF Nat} {snapshot : State} {count : Nat}
+private theorem finishBody_inv {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     {c : LearnedContext formula snapshot count rank leaves} {offset p lit : Nat}
     {s : State} {learned : Array Lit} {lbd : Nat} {used : Bool}
@@ -148,7 +148,7 @@ private theorem finishBody_inv {formula : CNF Nat} {snapshot : State} {count : N
     | exact inv
     | exact inv.retuple _ _ _
 
-private theorem advance {formula : CNF Nat} {snapshot : State} {count : Nat}
+private theorem advance {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     {c : LearnedContext formula snapshot count rank leaves} {offset : Nat} {acc : LearnedAcc}
     (inv : LearnedInv c offset acc) (within : offset < c.candidate + 1 - c.lower)
@@ -190,7 +190,7 @@ private theorem advance {formula : CNF Nat} {snapshot : State} {count : Nat}
       have leafLit : leaves lit := by rw [← equal]; exact leaf
       simpa only [equal] using current leafLit
 
-private theorem learnedBody_step {formula : CNF Nat} {snapshot : State} {count : Nat}
+private theorem learnedBody_step {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     (c : LearnedContext formula snapshot count rank leaves) (offset : Nat) (acc : LearnedAcc)
     (within : offset < c.candidate + 1 - c.lower) (inv : LearnedInv c offset acc) :
@@ -264,7 +264,7 @@ private theorem learnedBody_step {formula : CNF Nat} {snapshot : State} {count :
 not retained has a derivation from strictly earlier original leaves. The
 original leaves are precisely bounded by the scanned interval; sound initial
 tag-6 caches are supplied independently through `ImpliedCache`. -/
-theorem buildLearned_certificate {formula : CNF Nat} {snapshot : State} {count : Nat}
+theorem buildLearned_certificate {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop}
     (graph : ReasonGraph formula snapshot count rank) (s : State) (candidate : Nat)
     (candidateBound : candidate < count) (storage : ReasonStorage snapshot s)
@@ -317,7 +317,7 @@ theorem buildLearned_certificate {formula : CNF Nat} {snapshot : State} {count :
 clause arrays. A retained clause falsifies every original leaf by forward rank
 induction. Removed leaves only consume strictly earlier facts from that
 induction, never their own falsity as a premise. -/
-theorem entails_of_leaf_certificates {formula : CNF Nat} {rank : Lit → Nat}
+theorem entails_of_leaf_certificates {formula : Std.Sat.CNF Nat} {rank : Lit → Nat}
     {leaves : Lit → Prop} {original learned : Array Lit}
     (originalLeaves : ∀ lit, leaves lit ↔ lit ∈ original)
     (entailed : CNF.EntailsClause formula (clauseView original))
@@ -351,7 +351,7 @@ theorem entails_of_leaf_certificates {formula : CNF Nat} {rank : Lit → Nat}
 MARK clause is entailed. All removal hypotheses are discharged by the actual
 `implied` recursion and actual backward loop above. Establishing this entry
 state from reachable first-UIP analysis remains a separate obligation. -/
-theorem buildLearned_entails {formula : CNF Nat} {snapshot : State} {count : Nat}
+theorem buildLearned_entails {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} {leaves : Lit → Prop} {original : Array Lit}
     (graph : ReasonGraph formula snapshot count rank) (s : State) (candidate : Nat)
     (candidateBound : candidate < count) (storage : ReasonStorage snapshot s)

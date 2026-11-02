@@ -21,7 +21,7 @@ def markedClause (snapshot : State) (count : Nat) (s : State) : CNF.Clause Nat :
 
 /-- Tag six is justified independently of the changing MARK clause. During
 resolution these are root consequences; minimization has not run yet. -/
-def RootTagConsequences (formula : CNF Nat) (snapshot : State) (count : Nat) (s : State) : Prop :=
+def RootTagConsequences (formula : Std.Sat.CNF Nat) (snapshot : State) (count : Nat) (s : State) : Prop :=
   ∀ lit, TrailMember snapshot count lit → s.mark lit = 6 →
     ∀ a, CNF.Sat a formula → Falsifies a lit
 
@@ -45,7 +45,7 @@ private theorem unassign_mark_two_iff (s : State) (target query : Lit) :
   · rw [unassign_mark_other (Ne.symm same)]
     exact ⟨fun h => ⟨same, h⟩, fun h => h.2⟩
 
-private theorem unassign_rootTag {formula : CNF Nat} {snapshot s : State} {count : Nat}
+private theorem unassign_rootTag {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat}
     (root : RootTagConsequences formula snapshot count s) (target : Lit) :
     RootTagConsequences formula snapshot count (s.unassign target) := by
   intro lit member tag
@@ -56,7 +56,7 @@ private theorem unassign_rootTag {formula : CNF Nat} {snapshot s : State} {count
   · rw [unassign_mark_other (Ne.symm same)] at tag
     exact root lit member tag
 
-private theorem marked_entails_of_inclusion {formula : CNF Nat} {snapshot before after : State}
+private theorem marked_entails_of_inclusion {formula : Std.Sat.CNF Nat} {snapshot before after : State}
     {count : Nat} (entailed : CNF.EntailsClause formula (markedClause snapshot count before))
     (included : ∀ lit, TrailMember snapshot count lit → before.mark lit = 2 → after.mark lit = 2) :
     CNF.EntailsClause formula (markedClause snapshot count after) := by
@@ -79,7 +79,7 @@ theorem ReasonStorage.packed {snapshot s : State} (storage : ReasonStorage snaps
     exact packed.terminator
   · simpa only [vars] using packed.wellFormed
 
-theorem markClause_rootTag {formula : CNF Nat} {snapshot s : State} {count : Nat}
+theorem markClause_rootTag {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat}
     {clauseId : Nat} {lits : Array Lit} (packed : PackedClause s clauseId lits)
     (arrays : ArrayBounds s) (root : RootTagConsequences formula snapshot count s)
     (offset : Nat) (inside : offset ≤ lits.size) :
@@ -228,7 +228,7 @@ theorem ResolutionFrame.arrayBounds {before after : State} (frame : ResolutionFr
   exact ⟨old.firstSize, frame.marksSize.trans old.marksSize, old.reasonsSize, old.phasesSize,
     old.trailSize, frame.previousSize.trans old.previousSize, frame.nextSize.trans old.nextSize⟩
 
-private structure ResolutionFacts (formula : CNF Nat) (snapshot : State) (count : Nat) (s : State) : Prop where
+private structure ResolutionFacts (formula : Std.Sat.CNF Nat) (snapshot : State) (count : Nat) (s : State) : Prop where
   storage : ReasonStorage snapshot s
   trail : s.trail = snapshot.trail
   vars : s.nVars = snapshot.nVars
@@ -236,7 +236,7 @@ private structure ResolutionFacts (formula : CNF Nat) (snapshot : State) (count 
   root : RootTagConsequences formula snapshot count s
   entailed : CNF.EntailsClause formula (markedClause snapshot count s)
 
-private theorem ResolutionFacts.transport {formula : CNF Nat} {snapshot before after : State} {count : Nat}
+private theorem ResolutionFacts.transport {formula : Std.Sat.CNF Nat} {snapshot before after : State} {count : Nat}
     (facts : ResolutionFacts formula snapshot count before) (frame : ResolutionFrame before after)
     (root : RootTagConsequences formula snapshot count after)
     (entailed : CNF.EntailsClause formula (markedClause snapshot count after)) :
@@ -244,7 +244,7 @@ private theorem ResolutionFacts.transport {formula : CNF Nat} {snapshot before a
   ⟨frame.reasonStorage facts.storage, frame.trail.trans facts.trail, frame.nVars.trans facts.vars,
     frame.arrayBounds facts.arrays, root, entailed⟩
 
-private theorem ResolutionFacts.setAssigned {formula : CNF Nat} {snapshot s : State} {count : Nat}
+private theorem ResolutionFacts.setAssigned {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat}
     (facts : ResolutionFacts formula snapshot count s) (assigned : Nat) :
     ResolutionFacts formula snapshot count { s with assigned := assigned } :=
   facts.transport (resolutionFrame_setAssigned s assigned) facts.root facts.entailed
@@ -262,7 +262,7 @@ private theorem tail_mem_iff {lits : Array Lit} {lit : Lit} :
     have index : 1 + (j - 1) = j := by omega
     simpa only [index, Array.getElem_toList, getElem!_pos lits j before] using value
 
-private theorem resolveUnmarked_correct {formula : CNF Nat} {snapshot s : State} {count : Nat}
+private theorem resolveUnmarked_correct {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat}
     (facts : ResolutionFacts formula snapshot count s) (p : Nat) (candidate : s.assigned = p)
     (through : MarksThrough snapshot count s) (notMarked : s.mark snapshot.trail[p]! ≠ 2) :
     ResolutionFacts formula snapshot count (s.unassign snapshot.trail[p]!) ∧
@@ -285,7 +285,7 @@ private theorem resolveUnmarked_correct {formula : CNF Nat} {snapshot s : State}
     rw [candidate] at atMost ⊢
     omega
 
-private theorem resolveMarked_correct {formula : CNF Nat} {snapshot s : State} {count : Nat}
+private theorem resolveMarked_correct {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (facts : ResolutionFacts formula snapshot count s) (p : Nat) (before : p < count)
     (candidate : s.assigned = p) (through : MarksThrough snapshot count s)
@@ -382,7 +382,7 @@ private theorem resolveMarked_correct {formula : CNF Nat} {snapshot s : State} {
       rw [candidate]
       exact earlier
 
-private def ResolutionStep (formula : CNF Nat) (snapshot : State) (count before : Nat)
+private def ResolutionStep (formula : Std.Sat.CNF Nat) (snapshot : State) (count before : Nat)
     (result : ForInStep State) : Prop :=
   match result with
   | .done next => ResolutionFacts formula snapshot count next ∧
@@ -390,7 +390,7 @@ private def ResolutionStep (formula : CNF Nat) (snapshot : State) (count before 
   | .yield next => ResolutionFacts formula snapshot count next ∧
       MarksBefore snapshot count next ∧ next.assigned + 1 = before
 
-private theorem resolutionBody_correct {formula : CNF Nat} {snapshot s : State} {count : Nat}
+private theorem resolutionBody_correct {formula : Std.Sat.CNF Nat} {snapshot s : State} {count : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (facts : ResolutionFacts formula snapshot count s) (positive : 0 < s.assigned)
     (bound : s.assigned ≤ count) (below : MarksBefore snapshot count s) :
@@ -432,7 +432,7 @@ private theorem resolutionBody_correct {formula : CNF Nat} {snapshot s : State} 
       rw [← read] at next
       exact ⟨next.1, next.2, cursor⟩
 
-private theorem resolutionScan_correct {formula : CNF Nat} {snapshot : State} {count : Nat}
+private theorem resolutionScan_correct {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank) (fuel : Nat) (s : State)
     (facts : ResolutionFacts formula snapshot count s) (assigned : s.assigned = fuel)
     (bound : fuel ≤ count) (below : MarksBefore snapshot count s) :
@@ -465,7 +465,7 @@ private theorem resolutionScan_correct {formula : CNF Nat} {snapshot : State} {c
 MARK clause. Each expanded reason is entailed and has strictly earlier tails;
 omitted tag-six tails are independently false in every input model. The
 returned MARK entries are all at or below the returned candidate cursor. -/
-theorem resolveToUIP_sound {formula : CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
+theorem resolveToUIP_sound {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (s : State)
     (storage : ReasonStorage snapshot s) (trail : s.trail = snapshot.trail)
     (vars : s.nVars = snapshot.nVars) (arrays : ArrayBounds s)
@@ -482,7 +482,7 @@ theorem resolveToUIP_sound {formula : CNF Nat} {snapshot : State} {count : Nat} 
 
 /-- At the initial conflict-analysis entry, `assigned` still counts the whole
 fixed snapshot prefix, so confinement before that cursor is automatic. -/
-theorem resolveToUIP_sound_of_count {formula : CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
+theorem resolveToUIP_sound_of_count {formula : Std.Sat.CNF Nat} {snapshot : State} {count : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (s : State)
     (storage : ReasonStorage snapshot s) (trail : s.trail = snapshot.trail)
     (vars : s.nVars = snapshot.nVars) (arrays : ArrayBounds s)
@@ -501,7 +501,7 @@ theorem resolveToUIP_sound_of_count {formula : CNF Nat} {snapshot : State} {coun
 /-- Marking a covered entailed conflict supplies the initial MARK-clause
 entailment. Root-tag omissions are discharged from independent consequences;
 no entailment assumption about the resulting MARK set is needed. -/
-theorem markClause_entails_of_clause {formula : CNF Nat} {snapshot s : State} {count clauseId : Nat}
+theorem markClause_entails_of_clause {formula : Std.Sat.CNF Nat} {snapshot s : State} {count clauseId : Nat}
     {lits : Array Lit} (packed : PackedClause s clauseId lits) (arrays : ArrayBounds s)
     (root : RootTagConsequences formula snapshot count s)
     (covered : ∀ lit ∈ lits, TrailMember snapshot count lit)

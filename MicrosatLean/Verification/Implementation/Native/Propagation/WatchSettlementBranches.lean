@@ -8,7 +8,7 @@ open CDCL Representation Analysis Std.Sat
 
 /-- The simultaneous exact replacement certificate also carries the settled
 processed prefix and precisely the retained visited part of its source list. -/
-theorem replacement_branch_settlement {s : State} {formula : CNF Nat}
+theorem replacement_branch_settlement {s : State} {formula : Std.Sat.CNF Nat}
     {original learned : List StoredClause} {heads : Nat → List Nat}
     (database : Database s original learned) (meaning : DatabaseMeaning formula original learned)
     (certificate : WatchCertificate s (original ++ learned) heads)
@@ -67,7 +67,7 @@ theorem WatchCertificate.assign {s : State} {entries : List StoredClause} {heads
 
 /-- Skipping the current satisfied clause preserves the old witnesses and
 settles this visit using the actual mark test before advancing its cursor. -/
-theorem skip_branch_settlement {s : State} {formula : CNF Nat}
+theorem skip_branch_settlement {s : State} {formula : Std.Sat.CNF Nat}
     {original learned : List StoredClause} {heads : Nat → List Nat}
     (database : Database s original learned) (meaning : DatabaseMeaning formula original learned)
     (certificate : WatchCertificate s (original ++ learned) heads)
@@ -110,7 +110,7 @@ theorem skip_branch_settlement {s : State} {formula : CNF Nat}
 
 /-- A genuine unit return settles its current watch with the newly appended
 true literal, and preserves all earlier processed/visited witnesses. -/
-theorem unit_branch_settlement {s : State} {formula : CNF Nat}
+theorem unit_branch_settlement {s : State} {formula : Std.Sat.CNF Nat}
     {original learned : List StoredClause} {heads : Nat → List Nat}
     (database : Database s original learned) (meaning : DatabaseMeaning formula original learned)
     (certificate : WatchCertificate s (original ++ learned) heads)

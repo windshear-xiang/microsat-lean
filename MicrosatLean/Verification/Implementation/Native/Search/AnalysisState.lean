@@ -17,7 +17,7 @@ def analysisHeads (s : State) (conflict : Nat) (heads : Nat → List Nat) : Nat 
 /-- Actual resolution and minimization retain the old watch storage; the
 actual final allocation installs both slots of its proved distinct learned
 clause. No coverage of the analyzer's output is assumed. -/
-theorem StateCertificate.analyze_watches {formula : CNF Nat} {s : State}
+theorem StateCertificate.analyze_watches {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     {conflict decision : Nat} {lits : Array Lit}
     (certificate : StateCertificate formula s original learned heads rank)
@@ -43,7 +43,7 @@ theorem StateCertificate.analyze_watches {formula : CNF Nat} {s : State}
     (normalized_first_two_ne noDuplicates)
   simpa only [analyze_eq_addClause, analysisHeads, List.append_assoc, before] using allocated
 
-theorem StateCertificate.analyze_reasons {formula : CNF Nat} {s : State}
+theorem StateCertificate.analyze_reasons {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     {conflict decision : Nat} {lits : Array Lit}
     (certificate : StateCertificate formula s original learned heads rank)
@@ -59,7 +59,7 @@ theorem StateCertificate.analyze_reasons {formula : CNF Nat} {s : State}
 
 /-- The runtime's next-cell zero test detects precisely a singleton learned
 clause, because every genuine literal cell is a declared nonzero literal. -/
-theorem analyze_root_iff_unit {formula : CNF Nat} {s : State}
+theorem analyze_root_iff_unit {formula : Std.Sat.CNF Nat} {s : State}
     {conflict decision : Nat} {lits : Array Lit} {rank : Lit → Nat}
     (entry : AnalysisTransitionEntry formula s conflict lits rank decision) :
     ((CDCL.analyze s conflict).1.db ((CDCL.analyze s conflict).2 + 1) == 0) = true ↔
@@ -80,7 +80,7 @@ theorem analyze_root_iff_unit {formula : CNF Nat} {s : State}
     apply beq_iff_eq.mpr
     simpa only [unit] using ready.packed.terminator
 
-theorem analyze_root_assertion {formula : CNF Nat} {s : State}
+theorem analyze_root_assertion {formula : Std.Sat.CNF Nat} {s : State}
     {conflict decision : Nat} {lits : Array Lit} {rank : Lit → Nat}
     (entry : AnalysisTransitionEntry formula s conflict lits rank decision)
     (root : ((CDCL.analyze s conflict).1.db ((CDCL.analyze s conflict).2 + 1) == 0) = true) :
@@ -103,7 +103,7 @@ theorem analyze_root_assertion {formula : CNF Nat} {s : State}
 /-- Complete base-certificate preservation for the actual analyzer. Saved
 decision prefixes prove freshness; cleanup proves output tags; allocation
 proves genuine watch and reason ownership. All output fields are conclusions. -/
-theorem StateCertificate.analyze {formula : CNF Nat} {s : State}
+theorem StateCertificate.analyze {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     {conflict decision : Nat} {lits : Array Lit}
     (certificate : StateCertificate formula s original learned heads rank)
@@ -148,7 +148,7 @@ theorem StateCertificate.analyze {formula : CNF Nat} {s : State}
 /-- The actual analyzer followed by its actual root-flag test and asserting
 assignment preserves the complete base certificate. A singleton assertion's
 root consequence is derived from the proved learned-clause entailment. -/
-theorem StateCertificate.analyze_assign {formula : CNF Nat} {s : State}
+theorem StateCertificate.analyze_assign {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     {conflict decision : Nat} {lits : Array Lit}
     (certificate : StateCertificate formula s original learned heads rank)

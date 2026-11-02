@@ -8,7 +8,7 @@ open CDCL Representation Std.Sat
 /-- Compose the real literal permutation and header rewiring into a complete
 watch certificate. The next cursor retains exactly the unvisited tail.
 Duplicate freedom supplies distinct new/retained watched literals. -/
-theorem replacement_branch_certificate {s : State} {formula : CNF Nat}
+theorem replacement_branch_certificate {s : State} {formula : Std.Sat.CNF Nat}
     {original learned : List StoredClause} {heads : Nat → List Nat}
     (database : Database s original learned) (meaning : DatabaseMeaning formula original learned)
     (certificate : WatchCertificate s (original ++ learned) heads)

@@ -61,7 +61,7 @@ theorem decide_reason_at_decision (s : State) (var : Nat) :
 
 /-- Existing propagated entries retain their semantic dependencies. The newly
 appended entry is a decision, so it introduces no new reason obligation. -/
-theorem reasonConsequences_decide {s : State} {formula : CNF Nat} {var : Nat}
+theorem reasonConsequences_decide {s : State} {formula : Std.Sat.CNF Nat} {var : Nat}
     (reasons : ReasonConsequences formula s) (fresh : FreshVariable s var)
     (space : s.assigned < s.trail.size) :
     ReasonConsequences formula (s.decide var) := by
@@ -86,7 +86,7 @@ theorem nextDecision_fresh {s : State} {cursor : Nat}
   have unmarked := nextDecisionScan_nonzero_unassigned (s.nVars + 1) s cursor nonzero
   exact freshVariable_of_unmarked active unmarked.1 unmarked.2
 
-theorem reasonConsequences_decide_nextDecision {s : State} {formula : CNF Nat} {cursor : Nat}
+theorem reasonConsequences_decide_nextDecision {s : State} {formula : Std.Sat.CNF Nat} {cursor : Nat}
     (reasons : ReasonConsequences formula s) (active : ActiveTrail s)
     (nonzero : nextDecision s cursor ≠ 0) (space : s.assigned < s.trail.size) :
     ReasonConsequences formula (s.decide (nextDecision s cursor)) :=

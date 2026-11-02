@@ -16,7 +16,7 @@ theorem marked_falsifies_of_trail {s : State} {a : Nat → Bool}
 
 /-- A unit clause entailed by the input forces its head under the current
 trail assumptions. The concrete watch scan must supply `unit`. -/
-theorem head_true_of_unit {s : State} {formula : CNF Nat} {lits : Array Lit} {head : Lit}
+theorem head_true_of_unit {s : State} {formula : Std.Sat.CNF Nat} {lits : Array Lit} {head : Lit}
     (entailed : CNF.EntailsClause formula (clauseView lits))
     (coverage : MarkedOnTrail s)
     (unit : ∀ lit ∈ lits, lit ≠ head → s.mark lit ≠ 0)
@@ -31,7 +31,7 @@ theorem head_true_of_unit {s : State} {formula : CNF Nat} {lits : Array Lit} {he
   have falseLit := marked_falsifies_of_trail coverage compatible (unit lit hlit ne)
   simpa only [Falsifies, equal] using falseLit
 
-theorem trailCompatible_assign_of_unit {s : State} {formula : CNF Nat}
+theorem trailCompatible_assign_of_unit {s : State} {formula : Std.Sat.CNF Nat}
     {lits : Array Lit} {clauseId : Nat} {root : Bool}
     (entailed : CNF.EntailsClause formula (clauseView lits))
     (coverage : MarkedOnTrail s)
@@ -74,7 +74,7 @@ theorem unit_of_replacement_none {s : State} {lits : Array Lit} {clauseId : Nat}
 
 /-- Actual assignment following a failed replacement scan preserves every
 input model compatible with the old trail. -/
-theorem trailCompatible_assign_of_replacement_none {s : State} {formula : CNF Nat}
+theorem trailCompatible_assign_of_replacement_none {s : State} {formula : Std.Sat.CNF Nat}
     {lits : Array Lit} {clauseId : Nat} {root : Bool}
     (packed : PackedClause s clauseId lits)
     (entailed : CNF.EntailsClause formula (clauseView lits))
@@ -87,7 +87,7 @@ theorem trailCompatible_assign_of_replacement_none {s : State} {formula : CNF Na
 
 /-- Actual unit assignment extends the semantic reason invariant. Freshness
 protects earlier reason entries; propagation supplies the new dependency. -/
-theorem reasonConsequences_assign {s : State} {formula : CNF Nat} {lits : Array Lit}
+theorem reasonConsequences_assign {s : State} {formula : Std.Sat.CNF Nat} {lits : Array Lit}
     {clauseId : Nat} {root : Bool} (reasons : ReasonConsequences formula s)
     (entailed : CNF.EntailsClause formula (clauseView lits))
     (coverage : MarkedOnTrail s)

@@ -293,7 +293,7 @@ theorem buildLearned_retained_decision_le_tail (s : State) (candidate : Nat) (ra
 
 /-- The concrete same-level-parent argument discharges the first minimizer
 failure premise for an actual UIP, including its `processed` reset. -/
-theorem buildLearned_uip_retained_decision_le_tail {formula : CNF Nat} {snapshot s : State}
+theorem buildLearned_uip_retained_decision_le_tail {formula : Std.Sat.CNF Nat} {snapshot s : State}
     {count currentDecision : Nat} {rank : Lit → Nat}
     (graph : ReasonGraph formula snapshot count rank) (storage : ReasonStorage snapshot s)
     (trail : s.trail = snapshot.trail) (parents : ReasonLevelParent snapshot count currentDecision)

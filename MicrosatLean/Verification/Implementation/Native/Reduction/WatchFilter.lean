@@ -183,7 +183,7 @@ theorem originalReads_of_watchCertificate {s : State} {original learned : List S
 
 /-- Semantic database preservation for the actual reducer, with the former
 read-frame premise discharged by the concrete watch representation. -/
-theorem reduceDB_database_meaning_of_watchCertificate {formula : CNF Nat} {s : State}
+theorem reduceDB_database_meaning_of_watchCertificate {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat}
     (database : Database s original learned) (meaning : DatabaseMeaning formula original learned)
     (certificate : WatchCertificate s (original ++ learned) heads) (k : Nat) :

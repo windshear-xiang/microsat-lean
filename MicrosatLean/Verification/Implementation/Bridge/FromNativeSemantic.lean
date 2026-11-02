@@ -50,14 +50,14 @@ theorem native_semantic {formula : Formula} {m : CDCL.Machine}
   · intro clause member lit contains
     rw [nativeState_database] at member
     obtain ⟨entry, stored, rfl⟩ := List.mem_map.mp member
-    obtain ⟨encoded, encodedMember, equal⟩ := Native.clauseView_mem.mp contains
+    obtain ⟨encoded, encodedMember, equal⟩ := MicrosatLean.Verification.clauseView_mem.mp contains
     rw [← equal]
     exact (base.database.layout.packed stored).wellFormed encoded encodedMember
   · intro clause member empty
     rw [nativeState_database] at member
     obtain ⟨entry, stored, rfl⟩ := List.mem_map.mp member
     have length := congrArg List.length empty
-    simp only [Native.Representation.StoredClause.view, Native.clauseView_literals,
+    simp only [Native.Representation.StoredClause.view, MicrosatLean.Verification.clauseView_literals,
       List.length_map, Array.length_toList, List.length_nil] at length
     have positive := base.nonempty entry stored
     omega
@@ -84,7 +84,7 @@ theorem native_semantic {formula : Formula} {m : CDCL.Machine}
           Array.getElem?_eq_getElem positive, Option.map_some]
         rw [← getElem!_pos entry.lits 0 positive, head, literalView_negate]
       · intro lit member
-        have words : (entry.view).literals = entry.lits.toList.map literalView := Native.clauseView_literals _
+        have words : (entry.view).literals = entry.lits.toList.map literalView := MicrosatLean.Verification.clauseView_literals _
         rw [words] at member
         obtain ⟨j, beforeTail, value⟩ := List.mem_iff_getElem.mp member
         have beforeWord : j + 1 < entry.lits.size := by

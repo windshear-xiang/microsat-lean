@@ -86,7 +86,7 @@ theorem prefixUnitClosed_of_birth {birth current : State} {decision retained tai
 and retained-tail birth witnesses. The remaining concrete history premise is
 that the older decision precedes that retained tail and its prefix survives.
 No unconditional persistence of the original asserting head is claimed. -/
-theorem buildLearned_origin_migration {formula : CNF Nat} {snapshot source current : State} {count decision : Nat}
+theorem buildLearned_origin_migration {formula : Std.Sat.CNF Nat} {snapshot source current : State} {count decision : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot count rank)
     (trail : source.trail = snapshot.trail) (candidate : Nat) (candidateBound : candidate < count)
     (lower : source.forced ≤ candidate) (nonempty : 0 < (buildLearned source candidate).2.1.size)

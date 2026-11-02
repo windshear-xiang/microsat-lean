@@ -52,7 +52,7 @@ theorem MachineInvariant.step_rank {formula : Formula} {before after : Machine}
     (beforeInvariant : MachineInvariant formula before) (afterInvariant : MachineInvariant formula after)
     (variables : Nat) (variablesEq : before.solver.nVars = variables)
     (running : step before = .running after) :
-    ControlRankLT (controlRank (3 ^ variables) variables after)
+    RankLT (controlRank (3 ^ variables) variables after)
       (controlRank (3 ^ variables) variables before) := by
   obtain ⟨original, learned, heads, rank, certificate⟩ := beforeInvariant
   obtain ⟨nextOriginal, nextLearned, nextHeads, nextRank, next⟩ := afterInvariant
@@ -85,7 +85,7 @@ theorem initialized_search_terminates {formula : Formula} (wellFormed : WellForm
       ValidProgress (MachineInvariant formula) (ValidResult formula) (step machine) := by
     have preserved := step_preserves_invariant valid
     cases next : step machine <;> simpa only [next, InvariantProgress, ValidProgress] using preserved
-  obtain ⟨fuel, result, finished⟩ := exists_runFor_finished_of_wellFounded_rank controlRank_wellFounded
+  obtain ⟨fuel, result, finished⟩ := exists_runFor_finished_of_wellFounded_rank rank_wellFounded
     initial (controlRank (3 ^ s.nVars) s.nVars) (by
       intro before after reachable running
       have beforeValid := invariant_of_runningReachable (MachineInvariant formula) invariant

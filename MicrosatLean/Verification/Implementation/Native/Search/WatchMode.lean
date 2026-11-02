@@ -5,7 +5,7 @@ namespace MicrosatLean.Verification.Implementation.Native.Search
 
 open CDCL Representation Propagation Analysis Std.Sat
 
-theorem StateCertificate.watchUnit_mode {formula : CNF Nat} {s : State}
+theorem StateCertificate.watchUnit_mode {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     {lit : Lit} {ref : Nat} (current : ref ∈ heads lit) (falseLit : s.mark lit ≠ 0)
@@ -39,7 +39,7 @@ theorem StateCertificate.watchUnit_mode {formula : CNF Nat} {s : State}
   have result := retainedMode.assign entry.id space fresh (retainedCertificate.arrays.literal_index literal.negate).1
   simpa only [← id, retained] using result
 
-theorem StateCertificate.watchConflict_mode {formula : CNF Nat} {s : State}
+theorem StateCertificate.watchConflict_mode {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (history : DecisionHistory s (original ++ learned)) (mode : PropagationMode s false)
@@ -65,7 +65,7 @@ def WatchModeOutcome : Progress → Prop
 
 /-- Actual watch traversal preserves root/nonroot propagation mode, including
 the analyzer's real singleton root-flag test and asserting assignment. -/
-theorem propagateWatches_mode {formula : CNF Nat} (s : State)
+theorem propagateWatches_mode {formula : Std.Sat.CNF Nat} (s : State)
     (decision oldLemmas : Nat) (root : Bool) (lit : Lit)
     (remaining : List Nat) (fuel : Nat) (arena first : Array Nat) (previous : Nat)
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
@@ -137,7 +137,7 @@ theorem propagateWatches_mode {formula : CNF Nat} (s : State)
               exact certificate.watchConflict_mode history (mode.restoreWatchArrays arena first) cursor.member falseLit found unmarked
             | true => simp only [ite_true, WatchModeOutcome]
 
-theorem step_watch_mode_outcome {formula : CNF Nat} (s : State)
+theorem step_watch_mode_outcome {formula : Std.Sat.CNF Nat} (s : State)
     (decision oldLemmas : Nat) (root : Bool) (lit : Lit) (previous : Nat)
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)

@@ -8,7 +8,7 @@ open CDCL Representation Propagation Analysis Std.Sat
 
 /-- The complete finite source traversal preserves every concrete fact needed
 by the public machine invariant, including the analyzer and root UNSAT branch. -/
-theorem propagateWatches_rich {formula : CNF Nat} (s : State)
+theorem propagateWatches_rich {formula : Std.Sat.CNF Nat} (s : State)
     (decision oldLemmas : Nat) (root : Bool) (lit : Lit)
     (remaining : List Nat) (fuel : Nat) (arena first : Array Nat) (previous : Nat)
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat} {count : Nat}
@@ -107,7 +107,7 @@ theorem propagateWatches_rich {formula : CNF Nat} (s : State)
 
 /-- The public step receives a sufficient budget from the actual proper
 arena. Counter/MTF facts additionally preserve the conditional decision cursor. -/
-theorem step_watch_rich {formula : CNF Nat} (s : State)
+theorem step_watch_rich {formula : Std.Sat.CNF Nat} (s : State)
     (decision oldLemmas : Nat) (root : Bool) (lit : Lit) (previous : Nat)
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat} {count : Nat}
     (remaining : List Nat)

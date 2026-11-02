@@ -130,7 +130,7 @@ theorem model_valid_of_complete_closed {s : State} {formula : Formula}
     (wellFormed : WellFormed formula) (variables : formula.numVars ≤ s.nVars)
     (sound : MarksSound s) (complete : AllVariablesAssigned s)
     (closed : NoConflict s formula) : formula.satisfiedBy s.phases = true :=
-  (formula_satisfiedBy_iff_sat _ _ wellFormed).mpr
+  (satisfiedBy_iff_models wellFormed _).mpr
     (formula_sat_of_complete_closed wellFormed variables sound complete closed)
 
 end MicrosatLean.Verification.Implementation.Native.Propagation

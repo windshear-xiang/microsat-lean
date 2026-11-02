@@ -4,7 +4,7 @@ namespace MicrosatLean.Verification.Implementation.Native.Search
 
 open CDCL Representation Propagation Analysis Std.Sat
 
-theorem WatchScanFacts.skip {formula : CNF Nat} {s : State}
+theorem WatchScanFacts.skip {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     {count : Nat} {lit : Lit} {previous ref : Nat} {rest : List Nat}
     (facts : WatchScanFacts formula s original learned heads rank count lit previous (ref :: rest))
@@ -23,7 +23,7 @@ theorem WatchScanFacts.skip {formula : CNF Nat} {s : State}
   exact ⟨nextOriginal, nextLearned, oriented.base, oriented.history, oriented.saved, oriented.units,
     oriented.bound, oriented.prefixSettled, visited, cursor⟩
 
-theorem WatchScanFacts.unit {formula : CNF Nat} {s : State}
+theorem WatchScanFacts.unit {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     {count : Nat} {lit : Lit} {previous ref : Nat} {rest : List Nat}
     (facts : WatchScanFacts formula s original learned heads rank count lit previous (ref :: rest))

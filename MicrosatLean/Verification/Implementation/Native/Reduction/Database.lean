@@ -210,7 +210,7 @@ theorem compactionResult_database {s : State} {original learned : List StoredCla
     split <;> rfl
   · simpa only [compactionInitial, Array.size_replicate] using result.remapSize
 
-theorem compactionResult_meaning {formula : CNF Nat} {s : State} {original learned : List StoredClause}
+theorem compactionResult_meaning {formula : Std.Sat.CNF Nat} {s : State} {original learned : List StoredClause}
     (database : Database s original learned) (meaning : DatabaseMeaning formula original learned)
     (initial : Database (compactionInitial s).1 original []) (k : Nat) :
     ∃ kept, Database (compactionResult s k).1 original kept ∧ DatabaseMeaning formula original kept ∧
@@ -222,7 +222,7 @@ theorem compactionResult_meaning {formula : CNF Nat} {s : State} {original learn
   obtain ⟨entry, retained, equal⟩ := List.mem_map.mp member
   exact List.mem_map.mpr ⟨entry, retainedEntries_mem retained, equal⟩
 
-theorem reduceDB_database_meaning {formula : CNF Nat} {s : State} {original learned : List StoredClause}
+theorem reduceDB_database_meaning {formula : Std.Sat.CNF Nat} {s : State} {original learned : List StoredClause}
     (database : Database s original learned) (meaning : DatabaseMeaning formula original learned)
     (initial : Database (compactionInitial s).1 original []) (k : Nat) :
     ∃ kept, Database (s.reduceDB k) original kept ∧ DatabaseMeaning formula original kept ∧
@@ -322,7 +322,7 @@ theorem compactionInitial_database {s : State} {original learned : List StoredCl
 /-- Actual database compaction and model preservation reduce to the isolated
 watch-header disjointness obligation `OriginalReads`; the scan, filter,
 allocator, counters and relocation association are already proved concretely. -/
-theorem reduceDB_database_meaning_of_originalReads {formula : CNF Nat} {s : State}
+theorem reduceDB_database_meaning_of_originalReads {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} (database : Database s original learned)
     (meaning : DatabaseMeaning formula original learned) (reads : OriginalReads s original) (k : Nat) :
     ∃ kept, Database (s.reduceDB k) original kept ∧ DatabaseMeaning formula original kept ∧

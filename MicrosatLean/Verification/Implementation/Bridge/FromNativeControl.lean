@@ -9,13 +9,13 @@ theorem unitClosed_fromNative {m : CDCL.Machine} {a : LogicalState} {w : Represe
     {lits : Array Lit} (closed : Native.Analysis.PrefixUnitClosed m.solver count lits) :
     UnitClosed (prefixLiterals a count) (clauseView lits) := by
   intro head member tails
-  obtain ⟨encoded, contained, equal⟩ := Native.clauseView_mem.mp member
+  obtain ⟨encoded, contained, equal⟩ := MicrosatLean.Verification.clauseView_mem.mp member
   rw [← equal]
   apply (trueBefore_iff represented bound encoded).mpr
   apply closed encoded contained
   intro tail tailMember different
   apply (falseBefore_iff represented bound tail).mp
-  exact tails (literalView tail) (Native.clauseView_mem.mpr ⟨tail, tailMember, rfl⟩)
+  exact tails (literalView tail) (MicrosatLean.Verification.clauseView_mem.mpr ⟨tail, tailMember, rfl⟩)
     (fun same => different (view_injective (same.trans equal.symm)))
 
 theorem native_levelCover {formula : Formula} {m : CDCL.Machine}
@@ -96,10 +96,9 @@ theorem native_settledWatch {formula : Formula} {m : CDCL.Machine}
       count lit ref := by
   intro entry member id
   have mapped : (nativeWitness original learned heads order).entries =
-      (original ++ learned).map fromNativeEntry := by simp [nativeWitness, RepresentationWitness.entries]
+      (original ++ learned) := by simp [nativeWitness, RepresentationWitness.entries]
   rw [mapped] at member
-  obtain ⟨old, contained, rfl⟩ := List.mem_map.mp member
-  exact (trueBefore_iff (native_rep base ordered) bound _).mpr (settled old contained id)
+  exact (trueBefore_iff (native_rep base ordered) bound _).mpr (settled entry member id)
 
 theorem native_settledPrefix {formula : Formula} {m : CDCL.Machine}
     {original learned : List Native.Representation.StoredClause} {heads : Lit → List Nat}
@@ -150,9 +149,9 @@ theorem native_control {formula : Formula} {m : CDCL.Machine}
     rw [nativeState_database] at member
     obtain ⟨entry, stored, rfl⟩ := List.mem_map.mp member
     have width : entry.lits.size = 1 := by
-      simpa [Native.Representation.StoredClause.view, Native.clauseView_literals,
+      simpa [Native.Representation.StoredClause.view, MicrosatLean.Verification.clauseView_literals,
         clauseView_literals] using single
-    obtain ⟨encoded, inside, view⟩ := Native.clauseView_mem.mp contains
+    obtain ⟨encoded, inside, view⟩ := MicrosatLean.Verification.clauseView_mem.mp contains
     have equal : encoded = entry.lits[0]! := by
       obtain ⟨i, before, value⟩ := Array.mem_iff_getElem.mp inside
       have first : i = 0 := by omega
@@ -166,7 +165,7 @@ theorem native_control {formula : Formula} {m : CDCL.Machine}
     change literalView entry.lits[0]! ∈ prefixLiterals
       (nativeState m.solver original learned) (nativeState m.solver original learned).trail.length at truth
     simpa only [prefixLiterals, List.take_length, LogicalState.trueTrail, TrueIn,
-      Native.literalView, literalView] using truth
+      MicrosatLean.Verification.literalView, literalView] using truth
   · intro noLearning
     exact native_decisionCursor base ordered (certificate.cursor noLearning)
   · intro i before

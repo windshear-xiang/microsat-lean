@@ -56,7 +56,7 @@ namespace MicrosatLean.Verification.Implementation.Native.Search
 
 open CDCL Representation Propagation Analysis Reduction Std.Sat
 
-theorem StateCertificate.setRestartCounters {formula : CNF Nat} {s : State}
+theorem StateCertificate.setRestartCounters {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank) (res fast : Nat) :
     StateCertificate formula { s with res := res, fast := fast } original learned heads rank := by
@@ -85,7 +85,7 @@ private theorem restart_config (s : State) : s.restart.config = s.config := by
 history, level cover, root-tag placement, and unit closure. Restart closure
 comes from the real saved root decision prefix; reduction uses exact retained
 literal arrays. No propagation rerun or output closure is assumed. -/
-theorem StateCertificate.prepareChoice {formula : CNF Nat} {s : State}
+theorem StateCertificate.prepareChoice {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (history : DecisionHistory s (original ++ learned)) (levels : LevelCover s) (six : SixBefore s)

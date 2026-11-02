@@ -5,23 +5,6 @@ namespace MicrosatLean.Verification.Implementation.Bridge
 
 /-! Shared representation identities for the two invariant presentations. -/
 
-def toNativeEntry (entry : StoredClause) : Native.Representation.StoredClause :=
-  ⟨entry.id, entry.lits⟩
-
-def fromNativeEntry (entry : Native.Representation.StoredClause) : StoredClause :=
-  ⟨entry.id, entry.lits⟩
-
-@[simp] theorem from_to_entry (entry : StoredClause) :
-    fromNativeEntry (toNativeEntry entry) = entry := rfl
-
-@[simp] theorem to_from_entry (entry : Native.Representation.StoredClause) :
-    toNativeEntry (fromNativeEntry entry) = entry := rfl
-
-theorem toNativeEntry_injective : Function.Injective toNativeEntry := by
-  intro left right same
-  have equal := congrArg fromNativeEntry same
-  simpa only [from_to_entry] using equal
-
 theorem nodup_of_map {α β : Type} (f : α → β) {items : List α}
     (distinct : (items.map f).Nodup) : items.Nodup := by
   induction items with
@@ -31,15 +14,6 @@ theorem nodup_of_map {α β : Type} (f : α → β) {items : List α}
     exact List.nodup_cons.mpr ⟨fun member => absent (List.mem_map.mpr ⟨head, member, rfl⟩), ih tail⟩
 
 theorem view_injective : Function.Injective literalView := Native.literalView_injective
-
-@[simp] theorem native_view_eq : Native.literalView = literalView := rfl
-
-@[simp] theorem native_clauseView_eq : Native.clauseView = clauseView := rfl
-
-@[simp] theorem native_formulaView_eq : Native.formulaView = formulaView := rfl
-
-@[simp] theorem native_entry_view (entry : StoredClause) :
-    (toNativeEntry entry).view = entry.view := rfl
 
 theorem prefix_mem_iff {a : LogicalState} {count : Nat} (bound : count ≤ a.trail.length)
     (lit : Literal) : lit ∈ prefixLiterals a count ↔
@@ -92,35 +66,23 @@ theorem trail_var {m : CDCL.Machine} {a : LogicalState} {w : RepresentationWitne
 
 theorem packed_toNative {s : CDCL.State} {entry : StoredClause} (packed : PackedClause s entry) :
     Native.Representation.PackedClause s entry.id entry.lits :=
-  ⟨packed.header, packed.bound, packed.literals, packed.terminator, packed.declared⟩
+  packed
 
 theorem databaseFrom_toNative {s : CDCL.State} {start : Nat} {entries : List StoredClause}
     (layout : DatabaseFrom s start entries) :
-    Native.Representation.DatabaseFrom s start (entries.map toNativeEntry) := by
-  induction entries generalizing start with
-  | nil => exact layout
-  | cons entry rest ih => exact ⟨layout.1, packed_toNative layout.2.1, ih layout.2.2⟩
+    Native.Representation.DatabaseFrom s start (entries) := layout
 
 theorem mapped_databaseView (entries : List StoredClause) :
-    Native.Representation.databaseView (entries.map toNativeEntry) =
-      databaseView (entries.map StoredClause.view) := by
-  simp only [Native.Representation.databaseView, databaseView, List.map_map]
-  rfl
+    Native.Representation.databaseView (entries) =
+      databaseView (entries.map Native.Representation.StoredClause.view) := rfl
 
 theorem database_toNative {m : CDCL.Machine} {a : LogicalState} {w : RepresentationWitness}
     (represented : Rep m a w) : Native.Representation.Database m.solver
-      (w.original.map toNativeEntry) (w.learned.map toNativeEntry) := by
-  refine ⟨?_, ?_, ?_⟩
-  · simpa only [RepresentationWitness.entries, List.map_append] using
-      databaseFrom_toNative represented.layout
-  · simpa only [List.map_map, Function.comp_def, toNativeEntry] using represented.fixed
-  · simpa only [List.length_map] using represented.count
+      (w.original) (w.learned) :=
+  ⟨represented.layout, represented.fixed, represented.count⟩
 
 theorem arrays_toNative {m : CDCL.Machine} {a : LogicalState} {w : RepresentationWitness}
-    (represented : Rep m a w) : Native.Representation.ArrayBounds m.solver :=
-  ⟨represented.arrays.first, represented.arrays.marks, represented.arrays.reasons,
-    represented.arrays.phases, represented.arrays.trail, represented.arrays.previous,
-    represented.arrays.next⟩
+    (represented : Rep m a w) : Native.Representation.ArrayBounds m.solver := represented.arrays
 
 theorem order_toNative {m : CDCL.Machine} {a : LogicalState} {w : RepresentationWitness}
     (represented : Rep m a w) : Native.Representation.MTFOrder m.solver w.order :=

@@ -7,16 +7,11 @@ namespace MicrosatLean.Verification.Implementation.Native.Search
 open CDCL Representation Propagation
 open Std.Sat
 
-/-- The intended meaning of completed solver results. SAT includes a complete
-finite model; UNSAT quantifies over all total standard-library assignments. -/
-def ValidResult (formula : Formula) : SolveResult → Prop
-  | .sat model _ => Covers model formula.numVars ∧ CNF.Sat (assignment model) (formulaView formula)
-  | .unsat _ => CNF.Unsat (formulaView formula)
 
 theorem validResult_sat_check {formula : Formula} (wellFormed : WellFormed formula)
     {model : Array Bool} {stats : Stats} (valid : ValidResult formula (.sat model stats)) :
     formula.satisfiedBy model = true :=
-  (formula_satisfiedBy_iff_sat _ _ wellFormed).mpr valid.2
+  (satisfiedBy_iff_models wellFormed _).mpr valid.2
 
 /-- The actual SAT guard is sound under propagation closure, mark/trail
 agreement, and coverage of both the traversed suffix and earlier cursor prefix.

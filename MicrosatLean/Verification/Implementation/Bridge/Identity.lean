@@ -21,18 +21,13 @@ theorem rep_frame_solver {before after : CDCL.Machine} (same : before.solver = a
 theorem rep_entries_unique {m : CDCL.Machine} {a b : LogicalState}
     {w v : RepresentationWitness} (left : Rep m a w) (right : Rep m b v) :
     w.original = v.original ∧ w.learned = v.learned := by
-  have equal := (database_toNative left).unique (database_toNative right)
-  constructor
-  · have mapped := congrArg (List.map fromNativeEntry) equal.1
-    simpa [List.map_map, Function.comp_def, from_to_entry] using mapped
-  · have mapped := congrArg (List.map fromNativeEntry) equal.2
-    simpa [List.map_map, Function.comp_def, from_to_entry] using mapped
+  exact (database_toNative left).unique (database_toNative right)
 
 private theorem packed_of_mem {m : CDCL.Machine} {a : LogicalState}
     {w : RepresentationWitness} (represented : Rep m a w)
     {entry : StoredClause} (member : entry ∈ w.entries) :
     Native.Representation.PackedClause m.solver entry.id entry.lits := by
-  exact (databaseFrom_toNative represented.layout).packed (List.mem_map.mpr ⟨entry, member, rfl⟩)
+  exact represented.layout.packed member
 
 theorem rep_reason_unique {m : CDCL.Machine} {a b : LogicalState}
     {w v : RepresentationWitness} (left : Rep m a w) (right : Rep m b v)
@@ -67,7 +62,7 @@ theorem rep_reason_unique {m : CDCL.Machine} {a b : LogicalState}
         sameId.symm ▸ packed_of_mem right contained
       have sameLiterals := (packed_of_mem left member).unique nextPacked
       have sameView : entry.view = next.view := by
-        simp only [StoredClause.view, sameLiterals]
+        simp only [Native.Representation.StoredClause.view, sameLiterals]
       exact congrArg some (view.symm.trans (sameView.trans nextView))
 
 theorem rep_trail_unique {m : CDCL.Machine} {a b : LogicalState}
@@ -92,8 +87,8 @@ theorem rep_unique {m : CDCL.Machine} {a b : LogicalState}
     {w v : RepresentationWitness} (left : Rep m a w) (right : Rep m b v) : a = b := by
   have entries := rep_entries_unique left right
   have variables := left.variables.trans right.variables.symm
-  have original := left.original.trans ((congrArg (List.map StoredClause.view) entries.1).trans right.original.symm)
-  have learned := left.learned.trans ((congrArg (List.map StoredClause.view) entries.2).trans right.learned.symm)
+  have original := left.original.trans ((congrArg (List.map Native.Representation.StoredClause.view) entries.1).trans right.original.symm)
+  have learned := left.learned.trans ((congrArg (List.map Native.Representation.StoredClause.view) entries.2).trans right.learned.symm)
   have trail := rep_trail_unique left right
   have roots := left.rootSize.trans right.rootSize.symm
   cases a
@@ -108,22 +103,23 @@ theorem rep_unique_of_solver_eq {before after : CDCL.Machine}
 private theorem watch_links {m : CDCL.Machine} {a : LogicalState} {w : RepresentationWitness}
     (represented : Rep m a w) (lit : Lit) :
     Native.Propagation.WatchLinks m.solver lit (w.heads lit) :=
-  ⟨(represented.watches.lists lit).1, (represented.watches.lists lit).2.1,
-    fun i bound => ((represented.watches.lists lit).2.2 i bound).2.2⟩
+  represented.watches.links lit
 
 private theorem watch_nonzero {m : CDCL.Machine} {a : LogicalState} {w : RepresentationWitness}
     (represented : Rep m a w) (lit : Lit) : ∀ ref ∈ w.heads lit, ref ≠ 0 := by
-  intro ref member
-  obtain ⟨i, bound, rfl⟩ := List.mem_iff_getElem.mp member
-  simpa only [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem bound, Option.getD_some]
-    using ((represented.watches.lists lit).2.2 i bound).1
+  intro ref member zero
+  obtain ⟨entry, stored, id, _⟩ := represented.watches.references lit ref member
+  have lower := (Native.Representation.DatabaseFrom.packed represented.layout stored).startLower
+  rw [zero] at id
+  simp only [CDCL.watchClause, Nat.zero_div] at id
+  omega
 
 theorem rep_heads_unique {m : CDCL.Machine} {a b : LogicalState}
     {w v : RepresentationWitness} (left : Rep m a w) (right : Rep m b v) : w.heads = v.heads := by
   funext lit
   exact (watch_links left lit).chain.unique (watch_links right lit).chain
     (watch_nonzero left lit) (watch_nonzero right lit)
-    ((left.watches.lists lit).2.1.symm.trans (right.watches.lists lit).2.1)
+    ((left.watches.links lit).2.1.symm.trans (right.watches.links lit).2.1)
 
 private def PointerChain (next : Nat → Nat) : List Nat → Prop
   | [] => True

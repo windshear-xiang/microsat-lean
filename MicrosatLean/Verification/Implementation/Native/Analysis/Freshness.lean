@@ -67,7 +67,7 @@ theorem DecisionLearned.fresh_of_origin {s : State} {decision : Nat} {lits : Arr
     rw [asserted] at trueHead
     exact trueHead falseHead.2
 
-theorem buildLearned_decision_shape {formula : CNF Nat} {snapshot s : State} {decision : Nat}
+theorem buildLearned_decision_shape {formula : Std.Sat.CNF Nat} {snapshot s : State} {decision : Nat}
     {rank : Lit → Nat} (graph : ReasonGraph formula snapshot snapshot.assigned rank)
     (active : ActiveTrail snapshot) (storage : ReasonStorage snapshot s) (trail : s.trail = snapshot.trail)
     (parents : ReasonLevelParent snapshot snapshot.assigned decision) (tags : ValidMarkTags snapshot snapshot.assigned s)
@@ -122,7 +122,7 @@ theorem buildLearned_decision_shape {formula : CNF Nat} {snapshot s : State} {de
 /-- Conflict-analysis entry with a concrete current decision interval. The
 conflict contains an actual false literal from that interval, and the
 same-level parent and root-tag facts are incoming reachability invariants. -/
-structure DecisionAnalysisEntry (formula : CNF Nat) (s : State) (conflict : Nat)
+structure DecisionAnalysisEntry (formula : Std.Sat.CNF Nat) (s : State) (conflict : Nat)
     (conflictLits : Array Lit) (rank : Lit → Nat) (decision : Nat) : Prop
     extends AnalysisEntry formula s conflict conflictLits rank where
   block : DecisionBlock s decision s.assigned
@@ -131,7 +131,7 @@ structure DecisionAnalysisEntry (formula : CNF Nat) (s : State) (conflict : Nat)
   rootEarlier : ∀ i, i < s.assigned → s.mark s.trail[i]! = 6 → i < decision
   conflictInBlock : ∃ i, decision ≤ i ∧ i < s.assigned ∧ s.trail[i]! ∈ conflictLits
 
-theorem DecisionAnalysisEntry.learned_shape {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem DecisionAnalysisEntry.learned_shape {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {conflictLits : Array Lit} {rank : Lit → Nat}
     (entry : DecisionAnalysisEntry formula s conflict conflictLits rank decision) :
     DecisionLearned s decision (analysisLearned s conflict) := by
@@ -179,7 +179,7 @@ theorem DecisionAnalysisEntry.learned_shape {formula : CNF Nat} {s : State} {con
   exact buildLearned_decision_shape entry.graph entry.active (frame.reasonStorage storage)
     (frame.trail.trans trail) entry.parents resolvedTags.1 uip forced rootEarlier
 
-theorem analyze_fresh_of_origins {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem analyze_fresh_of_origins {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {conflictLits : Array Lit} {rank : Lit → Nat} {entries : List StoredClause}
     (entry : DecisionAnalysisEntry formula s conflict conflictLits rank decision)
     (origins : ∀ old ∈ entries, ClauseOrigin s decision old) :
@@ -237,7 +237,7 @@ theorem DecisionLearned.canonical_fresh {s : State} {decision : Nat} {lits : Arr
 /-- Canonical freshness follows from actual clause origins, predecision unit
 closure and surviving asserting heads. It is not an incoming no-duplicate
 assumption. Bounded, nontautological old clauses make canonical equality exact. -/
-theorem analyze_canonical_fresh {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem analyze_canonical_fresh {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {conflictLits : Array Lit} {rank : Lit → Nat} {original learned : List StoredClause}
     (entry : DecisionAnalysisEntry formula s conflict conflictLits rank decision)
     (database : Database s original learned)
@@ -249,7 +249,7 @@ theorem analyze_canonical_fresh {formula : CNF Nat} {s : State} {conflict decisi
   exact entry.learned_shape.canonical_fresh entry.active entry.graph.distinctVariables (origins old member)
     (database.layout.packed member).wellFormed (normalized old member)
 
-theorem analyze_canonical_distinct {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem analyze_canonical_distinct {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {conflictLits : Array Lit} {rank : Lit → Nat} {original learned : List StoredClause}
     (entry : DecisionAnalysisEntry formula s conflict conflictLits rank decision)
     (database : Database s original learned)
@@ -271,7 +271,7 @@ theorem analyze_canonical_distinct {formula : CNF Nat} {s : State} {conflict dec
 /-- The actual post-analysis learned counter satisfies the finite `3^n`
 bound. The new canonical key is proved fresh from clause origins, and the real
 packed database extension supplies the counter/list correspondence. -/
-theorem analyze_learnedCount_bound {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem analyze_learnedCount_bound {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {conflictLits : Array Lit} {rank : Lit → Nat} {original learned : List StoredClause}
     (entry : DecisionAnalysisEntry formula s conflict conflictLits rank decision)
     (database : Database s original learned)

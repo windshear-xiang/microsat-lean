@@ -16,7 +16,7 @@ structure NonrootPhase (s : State) : Prop where
 /-- The base state, saved closed decision prefixes, and a genuine all-false
 clause establish every analyzer entry gate. In particular the nearest
 decision, same-level reason parent, and current conflict literal are derived. -/
-theorem StateCertificate.analysisTransitionEntry {formula : CNF Nat} {s : State}
+theorem StateCertificate.analysisTransitionEntry {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (history : DecisionHistory s (original ++ learned)) (phase : NonrootPhase s)
@@ -47,7 +47,7 @@ theorem StateCertificate.analysisTransitionEntry {formula : CNF Nat} {s : State}
 
 /-- Actual finite learned-count progress no longer assumes a current block,
 reason parents, clause origins, or a current-level conflict witness. -/
-theorem StateCertificate.analyze_count_bound_of_conflict {formula : CNF Nat} {s : State}
+theorem StateCertificate.analyze_count_bound_of_conflict {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     (certificate : StateCertificate formula s original learned heads rank)
     (history : DecisionHistory s (original ++ learned)) (phase : NonrootPhase s)
@@ -77,7 +77,7 @@ theorem nonrootPhase_decide {s : State} (cover : LevelCover s) (caches : SixBefo
 
 /-- Actual analysis, backjump, and the subsequent nonroot assertion restore
 the concrete phase data; transient minimization caches have been cleaned. -/
-theorem NonrootPhase.analyze_assign {formula : CNF Nat} {s : State} {conflict decision : Nat}
+theorem NonrootPhase.analyze_assign {formula : Std.Sat.CNF Nat} {s : State} {conflict decision : Nat}
     {lits : Array Lit} {rank : Lit → Nat} (phase : NonrootPhase s)
     (entry : AnalysisTransitionEntry formula s conflict lits rank decision)
     (many : 1 < (analysisLearned s conflict).size) :

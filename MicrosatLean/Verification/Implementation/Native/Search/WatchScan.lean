@@ -6,7 +6,7 @@ namespace MicrosatLean.Verification.Implementation.Native.Search
 open CDCL Representation Propagation Analysis Std.Sat
 
 /-- The concrete facts carried within one false literal's finite list scan. -/
-structure WatchScanFacts (formula : CNF Nat) (s : State)
+structure WatchScanFacts (formula : Std.Sat.CNF Nat) (s : State)
     (original learned : List StoredClause) (heads : Nat → List Nat) (rank : Lit → Nat)
     (count : Nat) (lit : Lit) (previous : Nat) (remaining : List Nat) : Prop where
   base : StateCertificate formula s original learned heads rank
@@ -20,7 +20,7 @@ structure WatchScanFacts (formula : CNF Nat) (s : State)
 
 /-- The exact keep-orientation preserves all already established scan facts.
 The current reference is deliberately left unvisited until its branch settles. -/
-theorem WatchScanFacts.orient {formula : CNF Nat} {s : State}
+theorem WatchScanFacts.orient {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     {count : Nat} {lit : Lit} {previous ref : Nat} {rest : List Nat}
     (facts : WatchScanFacts formula s original learned heads rank count lit previous (ref :: rest))
@@ -53,7 +53,7 @@ theorem WatchScanFacts.orient {formula : CNF Nat} {s : State}
 
 /-- Actual replacement preserves the simultaneous base, both histories,
 singleton truth and active settlement, while removing exactly the visited ref. -/
-theorem WatchScanFacts.move {formula : CNF Nat} {s : State}
+theorem WatchScanFacts.move {formula : Std.Sat.CNF Nat} {s : State}
     {original learned : List StoredClause} {heads : Nat → List Nat} {rank : Lit → Nat}
     {count : Nat} {lit : Lit} {previous ref pos : Nat} {rest : List Nat}
     (facts : WatchScanFacts formula s original learned heads rank count lit previous (ref :: rest))

@@ -7,10 +7,6 @@ open CDCL Representation Std.Sat
 @[simp] theorem restoreWatchArrays_mark (s : State) (arena first : Array Nat) (lit : Lit) :
     (restoreWatchArrays s arena first).mark lit = s.mark lit := rfl
 
-/-- A proper watch reference belongs to a genuine long stored clause, rather
-than to an arbitrary zero-terminated suffix in the arena. -/
-def StoredWatchRef (entries : List StoredClause) (ref : Nat) : Prop :=
-  ∃ entry ∈ entries, watchClause ref = entry.id ∧ 2 ≤ entry.lits.size
 
 theorem StoredWatchRef.mapEntries {entries : List StoredClause} {ref : Nat}
     (proper : StoredWatchRef entries ref) (f : StoredClause → StoredClause)
@@ -85,7 +81,7 @@ theorem propagateWatches_replacement (fuel : Nat) (s : State) (arena first : Arr
 up to the exact source-order literal permutation and preserves input models.
 Both current and previous refs name genuine stored clauses; no poststate
 database, propagation closure, or semantic reason premise is assumed. -/
-theorem replacement_branch_database {s : State} {formula : CNF Nat}
+theorem replacement_branch_database {s : State} {formula : Std.Sat.CNF Nat}
     {original learned : List StoredClause} (database : Database s original learned)
     (meaning : DatabaseMeaning formula original learned) (lit : Lit) (ref previous : Nat)
     {entry : StoredClause} (member : entry ∈ original ++ learned) (id : watchClause ref = entry.id)
