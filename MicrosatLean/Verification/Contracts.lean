@@ -4,17 +4,19 @@ import MicrosatLean.Verification.Progress
 namespace MicrosatLean.Verification
 
 /-!
-本文件将待证明责任定义为命题，不将它们声明为公理。
-`Implementation/Obligations.lean` 当前使用显式 `sorry` 提供占位证明；
-在不改变公开接口的情况下，以具体证明替换这些占位即可补齐框架。
+This file declares obligations as propositions, not axioms.
+`Implementation/Obligations.lean` assembles their concrete proofs. The generic
+correctness composition exposes this package explicitly. The executable runner
+uses only the initialization, preservation and decrease proofs in Termination.
 
-依赖方向：定义 → contracts → 实现证明 → correctness。
-实现证明不能反向导入 Correctness，也不能仅为让证明通过而修改 specification。
-细化内部 invariant 后，需要重新证明初始化和 preservation。
+Dependencies: definitions -> contracts -> implementation proofs -> correctness.
+No implementation proof may import Correctness or change this specification
+merely to make a proof pass. Refining an internal invariant requires proving
+initialization and preservation again.
 -/
 
-/-- 初始化 contract：每个良构输入都初始化成功；提前返回 UNSAT 必须是真的不可满足，
-否则实际产生的初始机器必须满足 invariant。 -/
+/-- Every well-formed input initializes without error. Early UNSAT is genuine;
+otherwise the exact initial machine has the declared invariant. -/
 def InitializationCorrect : Prop := ∀ formula,
   WellFormed formula → ∀ config : CDCL.Config,
     ∃ initialized, CDCL.initState formula config = .ok initialized ∧
@@ -22,20 +24,29 @@ def InitializationCorrect : Prop := ∀ formula,
       | none => Std.Sat.CNF.Unsat (formulaView formula)
       | some s => Inv formula (InitialMachine s)
 
-/-- 继续运行时的后置条件：建立输出的 representation、控制和进展事实，并对应一段逻辑执行。
-此处不直接假定输出语义正确；`Correctness` 通过 `LogicalExecution` 推出该结论。 -/
+/-- Output storage/control/progress facts are obligations. Semantic validity
+is intentionally absent: Correctness derives it via LogicalExecution. -/
 def RunningPost (formula : Formula) (before : LogicalState) (after : CDCL.Machine) : Prop :=
   ∃ next witness,
     Rep after next witness ∧ next.numVars = max 1 formula.numVars ∧
     LogicalExecution (formulaView formula) before next ∧
     ControlInv (formulaView formula) after next witness ∧ ProgressInv next
 
-/-- 结束 step 的后置条件：必须通过逻辑执行导出 SAT/UNSAT 终态条件，
-不能直接假定返回结果已满足最终 `ValidResult`。 -/
+/-- A running refinement preserves the invariant through logical soundness.
+This composition is shared by termination and final correctness. -/
+theorem RunningPost.invariant {formula : Formula} {before after : CDCL.Machine}
+    {state : LogicalState} {witness : RepresentationWitness}
+    (sound : LogicalSoundness) (certificate : Certificate formula before state witness)
+    (post : RunningPost formula state after) : Inv formula after := by
+  obtain ⟨next, nextWitness, represented, variables, execution, control, progress⟩ := post
+  exact ⟨next, nextWitness, certificate.input, variables, represented,
+    execution_preserves sound certificate.semantic execution, control, progress⟩
+
+/-- A terminal step must derive the logical SAT/UNSAT gate. It cannot assume
+that its returned result already satisfies the final ValidResult predicate. -/
 def FinishedPost (formula : Formula) (before : LogicalState) (result : CDCL.SolveResult) : Prop :=
   ∃ next, LogicalExecution (formulaView formula) before next ∧ Terminal formula next result
 
-/-- 指定执行阶段的 contract：输入完整证书成立时，真实 `step` 满足对应的运行或结束后置条件。 -/
 def PhaseCorrect (phase : CDCL.Phase) : Prop :=
   ∀ formula machine state witness,
     Certificate formula machine state witness → machine.phase = phase →
@@ -43,33 +54,24 @@ def PhaseCorrect (phase : CDCL.Phase) : Prop :=
       | .running after => RunningPost formula state after
       | .finished result => FinishedPost formula state result
 
-/-- 最终组合所需的全部证明前提，包括纯逻辑规则、初始化、四个阶段和 variant 下降。
-不假设成功的执行预算或正确性 oracle。各阶段按实际涉及的操作承担分配、规范化、watch 扫描、
-分析与最小化、历史恢复、restart 和 reduction 的证明责任。 -/
+/-- All dependencies of the final composition, including pure logical rules,
+are visible here. There is no assumed execution budget or correctness oracle.
+The four phase obligations include allocation, normalization, watch scanning,
+analysis/minimization, history recovery, restart and reduction as applicable. -/
 structure ImplementationFacts : Prop where
-  /-- 每种逻辑操作保持语义 invariant 的证明。 -/
   logicalMoves : LogicalSoundness
-  /-- 逻辑 SAT/UNSAT 终态条件推出最终 specification 的证明。 -/
   terminal : TerminalSoundness
-  /-- 真实初始化满足输入及初始 invariant contract 的证明。 -/
   initialization : InitializationCorrect
-  /-- 开始 propagation 阶段满足其 contract 的证明。 -/
   beginPropagation : PhaseCorrect .beginPropagation
-  /-- 选择下一个传播文字阶段满足其 contract 的证明。 -/
   nextLiteral : PhaseCorrect .nextLiteral
-  /-- watch 扫描及其传播、冲突处理满足 contract 的证明。 -/
   watch : PhaseCorrect .watch
-  /-- restart、reduction、decision 或 SAT 结束分支满足 contract 的证明。 -/
   choose : PhaseCorrect .choose
-  /-- 每个继续运行的真实 step 都严格降低终止 variant 的证明。 -/
   decreases : StepDecreases
 
-/-- 统一描述执行结果：继续运行时 invariant 成立；结束时结果满足 `ValidResult`。 -/
 def InvariantProgress (formula : Formula) : CDCL.Progress → Prop
   | .running machine => Inv formula machine
   | .finished result => ValidResult formula result
 
-/-- 根据机器当前阶段，选择对应的阶段 contract，得到真实单步执行的后置条件。 -/
 theorem phase_correct (facts : ImplementationFacts) {formula : Formula}
     {machine : CDCL.Machine} {state : LogicalState} {witness : RepresentationWitness}
     (certificate : Certificate formula machine state witness) :

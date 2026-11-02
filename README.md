@@ -32,13 +32,12 @@ models against the original input, including clauses normalized by the solver.
 | `CDCL.State` | Packed arena, linked watches, false-literal trail, phases, decision list and database reduction |
 | `CDCL.Analysis` | First-UIP resolution, recursive clause minimization, backjumping and LBD averages |
 | `CDCL.Search` | Propagation, decisions, adaptive restart and resumable search |
-| `Solver` | Input-bound precheck, initialization and standalone IO execution driver |
+| `Solver` | Thin IO wrapper around the verified total solver |
 
 The `Formula` and `CDCL` modules are copied unchanged from
-`Tim-dev-verification` at `9aea98c`. This branch has a new, independently
-organized verification scaffold described below. `Solver` keeps the same
-input-bound precheck and uses a partial IO driver over the copied `runFor` and
-`step` definitions; it does not execute the admitted scaffold.
+`Tim-dev-verification` at `9aea98c`. The public `Solver` uses the readable
+verification framework below: its total runner repeatedly executes the same
+`step` function, with the existing input-bound precheck and initializer.
 
 The implementation preserves the source's watched-literal scan order,
 move-to-front variable heuristic, phase saving, first-UIP minimization, integer
@@ -84,7 +83,7 @@ the run. `.agent-memory/` contains only concise, durable agent notes.
 
 The complete native suite passed 657/657 checks: all 128 fixtures, all 512
 brute-force cases and all 17 malformed inputs. The slowest corpus case took
-1.994 seconds under a three-second limit on the development machine. The Lean
+1.713 seconds under a ten-second limit on the development machine. The Lean
 regressions also pass. Differential checks against a C reference matched all
 96 structured/SATLIB statuses and conflict counts after applying the same input
 normalization; the reference changed only the original four-GiB arena reserve
@@ -92,12 +91,13 @@ to 16 MiB for these tests. The checked-in C source remains unchanged.
 
 ## Verification status
 
-The production solver remains executable, tested code with a partial outer IO
-driver. Its storage operations, conflict analysis, `step` and `runFor` are total
-Lean definitions. Fuel exhaustion returns a resumable machine, never SAT/UNSAT.
-The new verification subtree is a **scaffold with eight explicit `sorry`
-obligations**, not a completed correctness or termination proof. No new axioms
-are declared. The original C source and the production solver are unchanged.
+The actual solver is proved correct and terminating for every well-formed
+`Formula` and every `Config`. SAT includes a complete model of the original
+input; UNSAT excludes every standard CNF assignment. `CDCL.solve` executes this
+proved total runner. There are no admitted proofs, additional axioms, unsafe
+implementations or partial execution drivers. The CDCL core and original C
+reference remain unchanged. `runFor` still provides bounded resumable execution;
+fuel exhaustion is never interpreted as SAT/UNSAT.
 
 Read the public framework in this order:
 
@@ -107,38 +107,83 @@ Read the public framework in this order:
 | [`Model`](MicrosatLean/Verification/Model.lean) | True-literal logical trail and its relation to the real packed arena, false-literal trail, reasons, watches and variable order |
 | [`Invariant`](MicrosatLean/Verification/Invariant.lean) | Present-state semantic, control/history and canonical-progress predicates |
 | [`Transitions`](MicrosatLean/Verification/Transitions.lean) | Admissible logical moves and terminal gates; a real step may implement several moves or logical stuttering |
-| [`Progress`](MicrosatLean/Verification/Progress.lean) | The `3^n` clause space and concrete lexicographic variant accounting for learning, reduction, restart and propagation |
+| [`Progress`](MicrosatLean/Verification/Progress.lean) | The `3^n` clause space and step-decrease contract; `Progress/Rank.lean` supplies the shared concrete lexicographic rank |
 | [`Contracts`](MicrosatLean/Verification/Contracts.lean) | Exact logical, initialization, four-phase and rank obligations for the actual solver |
-| [`Correctness`](MicrosatLean/Verification/Correctness.lean) | Proved composition for finite `runFor`, a rank-based total runner and initialized solver results, conditional on those obligations |
+| [`Termination`](MicrosatLean/Verification/Termination.lean) | Initialization, invariant preservation on running steps and strict rank decrease required by the executable runner |
+| [`Correctness`](MicrosatLean/Verification/Correctness.lean) | Separate proofs of finite `runFor` correspondence and SAT/UNSAT correctness for the actual runner and public solver |
 
-All current admissions are named in
-[`Implementation/Obligations.lean`](MicrosatLean/Verification/Implementation/Obligations.lean):
-logical-move preservation, terminal soundness, initialization, the four real
-search phases, and actual rank decrease. Replace these leaves with detailed
-proofs without changing the public specifications. In particular, learned
-freshness, sufficient scan bounds, saved-prefix recovery and reason relocation
-must be derived from the actual implementation, not added as input assumptions.
+Execution follows `CDCL.solve -> CDCL.solvePure -> CDCL.run -> CDCL.step`.
+[`CDCL/Runner.lean`](MicrosatLean/CDCL/Runner.lean) contains the total recursive
+loop and returns an ordinary `SolveResult`, with no result certificate or
+implementation-proof package. [`Solver.lean`](MicrosatLean/Solver.lean) checks
+input bounds, handles initialization outcomes and supplies the IO wrapper.
+The runner imports `Verification/Termination` for the proofs needed to justify
+recursion; it does not import `Verification/Correctness` or the completed
+`Implementation/Obligations` package. `Correctness` imports the solver and
+proves its result valid afterward. The invariant, rank and input semantics
+remain shared with the existing proof framework.
 
-The Std CNF bridge and the generic composition proofs contain no admissions.
-`solveScaffold_correct` and `initialized_search_terminates` specialize that
-composition to the admitted leaves and therefore **still depend on `sorryAx`**.
-`solveScaffold` is an opt-in experimental value; `Main` and `CDCL.solve` do not
-import or use it. Connecting a completed proof to the public IO entry is future
-work. The proof boundary starts at bounded `Formula`; DIMACS parsing, filesystem
-IO, printing and equivalence to the C implementation are outside this scaffold.
+[`Implementation/Obligations.lean`](MicrosatLean/Verification/Implementation/Obligations.lean)
+assembles all eight completed obligations. Detailed proofs are organized below
+that interface:
 
-Build and inspect the scaffold separately from the native executable:
+| Directory | Responsibility |
+| --- | --- |
+| `Implementation/Encoding.lean` | Auxiliary literal/clause lemmas using the single public CNF specification |
+| `Implementation/Representation/` | Shared storage types, packed arena layout, trail, reasons and variable ordering |
+| `Implementation/Initialization/` | Actual normalization, allocation, initial units and watches |
+| `Implementation/Logic/` | Logical transition preservation, terminal soundness, resolution and finite clause space |
+| `Implementation/Propagation/` | Watch links, replacement scans, propagation closure and retained reasons |
+| `Implementation/Analysis/` | Reason graphs, conflict resolution, minimization, backjumping, assertion and learned-clause freshness |
+| `Implementation/Reduction/` | Clause retention, arena compaction, reason relocation and watch rebuilding |
+| `Implementation/Search/` | Four-phase logical refinement; `Concrete/` contains concrete search certificates, preservation and rank proofs |
+| `Implementation/Bridge/` | Logical views and refinement between abstract semantic facts and concrete algorithm certificates |
+
+The operation proofs originated in `Tim-dev-verification` at `9aea98c` and are
+integrated by responsibility; there is no parallel legacy proof tree. CNF views,
+input bounds, model semantics and the result predicate have one definition in
+`Specification`. `Model` uses the canonical storage predicates from
+`Implementation/Representation/Types.lean`, and both proof layers use the same
+rank from `Progress/Rank.lean`. There are no clause-entry conversion functions
+or identity maps between duplicate storage types. Abstract logical trails and
+concrete reason graphs remain distinct because they express different facts.
+
+Unused historical theorem variants and the old execution/termination composition
+were removed. Small public-only modules with one consumer are grouped with that
+consumer, while the eight obligation entry points remain separate and reviewable.
+
+The watch and choice proofs produce actual `LogicalExecution` witnesses;
+semantic validity is derived by the generic composition. They also preserve
+the separate representation, control/history and progress facts. Learned
+freshness, finite scan bounds, saved-prefix recovery and reason relocation are
+proved from the implementation. The watch phase requires a real nonroot level
+when its root flag is false; only an idle next-literal phase admits an empty
+nonroot suffix.
+
+`run_finishes` connects `CDCL.run` to finite `runFor` execution, and `run_correct`
+derives result validity from the bounded-execution theorem.
+`solveCertified_correct` is the main pure-solver entry theorem;
+`initialized_search_terminates` gives a finite real `runFor` execution with a
+valid result. `CDCL.solve_correct` connects the same result to the public IO
+wrapper. This theorem lives in `Verification/Correctness`, so callers needing
+proofs import `MicrosatLean.Verification`; executable callers can import only
+`MicrosatLean.Solver`. `solveCertified` and `solveScaffold` are compatibility
+abbreviations for `CDCL.solvePure`, and add no layers to its execution path.
+`solveScaffold_correct` also remains available. Proofs and the termination rank
+erase from runtime code. The boundary starts at bounded `Formula`; DIMACS parsing, filesystem IO,
+printing and equivalence to the C implementation remain outside the proof.
+
+Build and audit the full proof graph:
 
 ```sh
 lake build MicrosatLean.Verification
 lake env lean tests/Verification.lean
 ```
 
-The audit checks every imported verification declaration, including private
-helpers. It accepts exactly the eight named direct admissions, rejects admitted
-definitions/statements and extra axioms, confirms that generic bridge/composition
-has no `sorryAx` dependency, and prints the specialized theorem's dependencies.
-The build intentionally reports warnings for the outstanding proofs.
+The audit checks all imported verification and CDCL declarations, including
+private/generated helpers, the total runner and the public IO correctness
+theorem. It permits only Lean's standard `propext`, `Classical.choice` and `Quot.sound`; any `sorryAx`
+dependency or additional axiom fails the check.
 
 The [DIMACS CNF test corpus](tests/cnf/README.md) contains 128 boundary,
 structured and SATLIB fixtures with expected SAT/UNSAT results. Validate it with:

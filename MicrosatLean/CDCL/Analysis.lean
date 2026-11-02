@@ -3,18 +3,19 @@ import MicrosatLean.CDCL.State
 namespace MicrosatLean.CDCL
 
 /-!
-冲突分析对应 `upstream/microsat.c` 中的 `analyze` 和 `implied`。
-具体 trail 保存为假的文字。reason 子句以被赋为真的文字开头，
-因此 resolution 和最小化只需检查各 reason 的 head 之后的文字。
+Conflict analysis follows `analyze` and `implied` in `upstream/microsat.c`.
+The trail stores falsified literals. Reason clauses start with the literal
+made true, so resolution and minimization inspect each reason after its head.
 
-可执行辅助函数采用显式上界：已赋值变量的 reason 只依赖更早的 trail 项，
-且每个 arena 子句都有零结束标记。这些是后续 refinement 证明需要建立的 invariant。
-最小化预算耗尽时，会保守地将文字留在学习子句中。
+The executable helpers use explicit bounds: reasons of assigned variables refer
+only to earlier trail entries, and every arena clause has a zero terminator.
+These are the intended invariants for subsequent refinement proofs. Exhausting
+the minimization bound conservatively retains a literal in the learned clause.
 -/
 
-/-- 检查某个假文字是否可由当前已标记文字推出，用于学习子句的递归最小化。
-与 Microsat 一致，标记 5 和 6 分别缓存失败和成功。
-在良构 implication graph 上，递归深度不超过 `nVars + 1`。 -/
+/-- Check whether a false literal follows from the currently marked literals.
+The tags 5 and 6 cache failure and success, respectively, as in Microsat.
+On a well-formed implication graph, `nVars + 1` bounds the recursive depth. -/
 def implied : Nat → State → Lit → State × Bool
   | 0, s, _ => (s, false)
   | fuel + 1, s, lit => Id.run do
@@ -36,7 +37,7 @@ def implied : Nat → State → Lit → State × Bool
           return (s.setMark lit 5, false)
     return (s.setMark lit 6, true)
 
-/-- 标记子句中从指定位置开始的后缀，并将相关变量移到启发式链表前端。 -/
+/-- Mark a clause suffix, also moving its variables to the heuristic front. -/
 def markClause (s : State) (start : Nat) : State := Id.run do
   let mut s := s
   for i in [start : s.arena.size] do
@@ -46,8 +47,8 @@ def markClause (s : State) (start : Nat) : State := Id.run do
     s := s.bump lit
   return s
 
-/-- 向前扫描当前 decision level，检查候选项之前是否还存在分析标记。
-若在遇到该层 decision 前没有更早的已标记文字，则候选项是 first UIP（唯一蕴含点）。 -/
+/-- The candidate is the first UIP precisely when no earlier marked literal
+occurs before the decision that begins its decision level. -/
 def firstUIP (s : State) (candidate : Nat) : Bool := Id.run do
   for offset in [:candidate] do
     let lit := s.trail[candidate - 1 - offset]!
@@ -57,8 +58,8 @@ def firstUIP (s : State) (candidate : Nat) : Bool := Id.run do
       return true
   return true
 
-/-- 按 trail 的逆序构造最小化的学习子句，同时记录 backjump 游标和 LBD（涉及的 decision level 数）。
-更早的分析标记仍可供 `implied` 使用。 -/
+/-- Construct the minimized learned clause in reverse trail order, recording
+its backjump cursor and LBD. Earlier MARK tags remain available to `implied`. -/
 def buildLearned (s : State) (candidate : Nat) : State × Array Lit × Nat := Id.run do
   let mut s := { s with processed := candidate }
   let mut learned : Array Lit := #[]
@@ -82,16 +83,16 @@ def buildLearned (s : State) (candidate : Nat) : State × Array Lit × Nat := Id
     s := s.setMark lit 1
   return (s, learned, lbd)
 
-/-- 清除分析候选项以及 backjump 游标以上的所有赋值。
-被弹出的内容仍保留在固定容量的 trail 数组中，但不再是活动赋值。 -/
+/-- Clear the analyzed candidate and every trail entry above the backjump
+cursor. Popped entries remain in the fixed-capacity trail array. -/
 def backjump (s : State) (candidate : Nat) : State := Id.run do
   let mut s := s
   for offset in [:candidate + 1 - s.processed] do
     s := s.unassign s.trail[candidate - offset]!
   return { s with assigned := s.processed }
 
-/-- 沿冲突的 implication graph 回退，直到遇到 decision 或 first UIP。
-此阶段中 `assigned` 从赋值个数临时变为候选项索引。 -/
+/-- Pop the conflict's implication graph until its decision or first UIP.
+During this phase `assigned` changes from a count to the candidate's index. -/
 def resolveToUIP (s : State) : State := Id.run do
   let mut s := s
   for _ in [:s.assigned] do
@@ -105,9 +106,11 @@ def resolveToUIP (s : State) : State := Id.run do
     s := s.unassign lit
   return s
 
-/-- 对非 root 冲突进行 resolution，最小化 first-UIP 子句并 backjump。
-`assigned` 通常表示个数，分析期间则表示候选项索引，对应源实现中递减后的赋值指针。
-固定容量 trail 保留弹出的内容，直到子句构造结束；返回学习子句首文字位置。 -/
+/-- Resolve a non-root conflict, minimize the first-UIP clause, and backjump.
+`assigned` is normally a count; while analyzing it is the candidate's index,
+exactly like the decremented assignment pointer in the source implementation.
+The fixed-capacity trail preserves popped entries until clause construction
+finishes. The result points to the learned clause's first literal. -/
 def analyze (s : State) (conflictClauseId : Nat) : State × Nat := Id.run do
   let mut s := { s with
     res := s.res + 1
