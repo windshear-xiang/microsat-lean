@@ -109,7 +109,19 @@ Read the public framework in this order:
 | [`Transitions`](MicrosatLean/Verification/Transitions.lean) | Admissible logical moves and terminal gates; a real step may implement several moves or logical stuttering |
 | [`Progress`](MicrosatLean/Verification/Progress.lean) | The `3^n` clause space and step-decrease contract; `Progress/Rank.lean` supplies the shared concrete lexicographic rank |
 | [`Contracts`](MicrosatLean/Verification/Contracts.lean) | Exact logical, initialization, four-phase and rank obligations for the actual solver |
-| [`Correctness`](MicrosatLean/Verification/Correctness.lean) | Proved composition for finite `runFor`, a rank-based total runner and initialized solver results, instantiated with the closed implementation proofs |
+| [`Termination`](MicrosatLean/Verification/Termination.lean) | Initialization, invariant preservation on running steps and strict rank decrease required by the executable runner |
+| [`Correctness`](MicrosatLean/Verification/Correctness.lean) | Separate proofs of finite `runFor` correspondence and SAT/UNSAT correctness for the actual runner and public solver |
+
+Execution follows `CDCL.solve -> CDCL.solvePure -> CDCL.run -> CDCL.step`.
+[`CDCL/Runner.lean`](MicrosatLean/CDCL/Runner.lean) contains the total recursive
+loop and returns an ordinary `SolveResult`, with no result certificate or
+implementation-proof package. [`Solver.lean`](MicrosatLean/Solver.lean) checks
+input bounds, handles initialization outcomes and supplies the IO wrapper.
+The runner imports `Verification/Termination` for the proofs needed to justify
+recursion; it does not import `Verification/Correctness` or the completed
+`Implementation/Obligations` package. `Correctness` imports the solver and
+proves its result valid afterward. The invariant, rank and input semantics
+remain shared with the existing proof framework.
 
 [`Implementation/Obligations.lean`](MicrosatLean/Verification/Implementation/Obligations.lean)
 assembles all eight completed obligations. Detailed proofs are organized below
@@ -148,12 +160,17 @@ proved from the implementation. The watch phase requires a real nonroot level
 when its root flag is false; only an idle next-literal phase admits an empty
 nonroot suffix.
 
-`solveCertified_correct` is the main entry theorem;
+`run_finishes` connects `CDCL.run` to finite `runFor` execution, and `run_correct`
+derives result validity from the bounded-execution theorem.
+`solveCertified_correct` is the main pure-solver entry theorem;
 `initialized_search_terminates` gives a finite real `runFor` execution with a
 valid result. `CDCL.solve_correct` connects the same result to the public IO
-wrapper. `solveScaffold` and `solveScaffold_correct` remain compatibility names
-for the initial framework. Proofs and the termination rank erase from runtime
-code. The boundary starts at bounded `Formula`; DIMACS parsing, filesystem IO,
+wrapper. This theorem lives in `Verification/Correctness`, so callers needing
+proofs import `MicrosatLean.Verification`; executable callers can import only
+`MicrosatLean.Solver`. `solveCertified` and `solveScaffold` are compatibility
+abbreviations for `CDCL.solvePure`, and add no layers to its execution path.
+`solveScaffold_correct` also remains available. Proofs and the termination rank
+erase from runtime code. The boundary starts at bounded `Formula`; DIMACS parsing, filesystem IO,
 printing and equivalence to the C implementation remain outside the proof.
 
 Build and audit the full proof graph:
@@ -163,9 +180,9 @@ lake build MicrosatLean.Verification
 lake env lean tests/Verification.lean
 ```
 
-The audit checks all imported verification declarations, including private and
-generated helpers, plus the public IO correctness theorem. It permits only
-Lean's standard `propext`, `Classical.choice` and `Quot.sound`; any `sorryAx`
+The audit checks all imported verification and CDCL declarations, including
+private/generated helpers, the total runner and the public IO correctness
+theorem. It permits only Lean's standard `propext`, `Classical.choice` and `Quot.sound`; any `sorryAx`
 dependency or additional axiom fails the check.
 
 The [DIMACS CNF test corpus](tests/cnf/README.md) contains 128 boundary,

@@ -6,7 +6,8 @@ namespace MicrosatLean.Verification
 /-!
 This file declares obligations as propositions, not axioms.
 `Implementation/Obligations.lean` assembles their concrete proofs. The generic
-composition exposes this package explicitly; the public solver supplies it.
+correctness composition exposes this package explicitly. The executable runner
+uses only the initialization, preservation and decrease proofs in Termination.
 
 Dependencies: definitions -> contracts -> implementation proofs -> correctness.
 No implementation proof may import Correctness or change this specification
@@ -30,6 +31,16 @@ def RunningPost (formula : Formula) (before : LogicalState) (after : CDCL.Machin
     Rep after next witness ∧ next.numVars = max 1 formula.numVars ∧
     LogicalExecution (formulaView formula) before next ∧
     ControlInv (formulaView formula) after next witness ∧ ProgressInv next
+
+/-- A running refinement preserves the invariant through logical soundness.
+This composition is shared by termination and final correctness. -/
+theorem RunningPost.invariant {formula : Formula} {before after : CDCL.Machine}
+    {state : LogicalState} {witness : RepresentationWitness}
+    (sound : LogicalSoundness) (certificate : Certificate formula before state witness)
+    (post : RunningPost formula state after) : Inv formula after := by
+  obtain ⟨next, nextWitness, represented, variables, execution, control, progress⟩ := post
+  exact ⟨next, nextWitness, certificate.input, variables, represented,
+    execution_preserves sound certificate.semantic execution, control, progress⟩
 
 /-- A terminal step must derive the logical SAT/UNSAT gate. It cannot assume
 that its returned result already satisfies the final ValidResult predicate. -/

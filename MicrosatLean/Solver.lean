@@ -1,17 +1,20 @@
-import MicrosatLean.Verification.Correctness
+import MicrosatLean.CDCL.Runner
 
 namespace MicrosatLean.CDCL
 
-/-- Execute the same CDCL transition through its proved total runner. -/
-def solve (formula : Formula) (config : Config := {}) : IO (Except String SolveResult) :=
-  pure (Verification.solveCertified formula config)
+/-- Check input bounds, initialize, and execute the total search loop. -/
+def solvePure (formula : Formula) (config : Config := {}) : Except String SolveResult :=
+  if valid : Verification.WellFormed formula then
+    match initialized : initState formula config with
+    | .error message => .error message
+    | .ok none => .ok (.unsat {})
+    | .ok (some s) =>
+      .ok (run formula (Verification.InitialMachine s)
+        (Verification.initial_invariant valid initialized))
+  else .error "literal outside the declared variable bounds"
 
-/-- The public IO entry returns a valid result for every well-formed input.
-The implementation package and all its dependencies are proved. -/
-theorem solve_correct (formula : Formula) (valid : Verification.WellFormed formula)
-    (config : Config := {}) :
-    ∃ result, solve formula config = pure (.ok result) ∧ Verification.ValidResult formula result := by
-  obtain ⟨result, returned, correct⟩ := Verification.solveCertified_correct formula valid config
-  exact ⟨result, by simp only [solve, returned], correct⟩
+/-- Public IO entry; logical correctness is proved in Verification/Correctness. -/
+def solve (formula : Formula) (config : Config := {}) : IO (Except String SolveResult) :=
+  pure (solvePure formula config)
 
 end MicrosatLean.CDCL

@@ -5,11 +5,10 @@ import Lean.Util.Sorry
 import Lean.Elab.Command
 
 /-!
-Strict axiom audit for the complete imported verification graph. Private and
-generated declarations are checked together with public declarations. No
-admission is permitted in a statement, a body, or a transitive dependency.
-The public IO solver theorem is checked explicitly even though its namespace
-is outside the verification tree.
+Strict axiom audit for the complete imported verification and CDCL graph.
+Private and generated declarations are checked together with public declarations.
+No admission is permitted in a statement, a body, or a transitive dependency.
+The public IO solver theorem is also checked among the named entry theorems.
 -/
 
 open Lean Elab Command in
@@ -17,7 +16,8 @@ run_cmd do
   let env ← getEnv
   let allowed := #[`propext, `Classical.choice, `Quot.sound]
   let declarations := env.constants.fold (init := #[]) fun found name info =>
-    if (`MicrosatLean.Verification).isPrefixOf (privateToUserName name) then
+    if (`MicrosatLean.Verification).isPrefixOf (privateToUserName name) ||
+        (`MicrosatLean.CDCL).isPrefixOf (privateToUserName name) then
       found.push (name, info)
     else found
   let mut theorems : Nat := 0
@@ -36,8 +36,12 @@ run_cmd do
       `MicrosatLean.Verification.unsat_iff_complete_models,
       `MicrosatLean.Verification.step_correct_with,
       `MicrosatLean.Verification.runFor_correct_with,
+      `MicrosatLean.Verification.initial_invariant,
+      `MicrosatLean.Verification.step_preserves,
+      `MicrosatLean.Verification.step_decreases,
+      `MicrosatLean.Verification.run_finishes,
+      `MicrosatLean.Verification.run_correct,
       `MicrosatLean.Verification.initialized_search_correct_with,
-      `MicrosatLean.Verification.solve_correct_with,
       `MicrosatLean.Verification.solveCertified_correct,
       `MicrosatLean.Verification.solveScaffold_correct,
       `MicrosatLean.Verification.initialized_search_terminates,
@@ -53,6 +57,8 @@ run_cmd do
   logInfo m!"Strict verification audit: {theorems} theorems, {declarations.size} declarations, no admissions."
   logInfo "Only propext, Classical.choice, and Quot.sound are permitted, including in the public IO solver theorem."
 
+#print axioms MicrosatLean.CDCL.run
+#print axioms MicrosatLean.Verification.run_finishes
 #print axioms MicrosatLean.Verification.solveCertified_correct
 #print axioms MicrosatLean.Verification.solveScaffold_correct
 #print axioms MicrosatLean.Verification.initialized_search_terminates
