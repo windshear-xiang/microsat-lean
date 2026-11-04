@@ -158,9 +158,9 @@ def step (machine : Machine) : Progress := Id.run do
     return .running ⟨s, decision, .beginPropagation, 0, false, 0, 0⟩
 
 /-- Execute at most `fuel` transitions, returning a resumable machine when the
-budget expires. Exhaustion is never classified as SAT or UNSAT. This total API
-is the intended entry point for future invariant and refinement proofs. A watch
-transition may visit several clauses, with its own arena-length bound. -/
+budget expires. This helper supports bounded and chunked regression tests;
+fuel exhaustion is never classified as SAT or UNSAT. A watch transition may
+visit several clauses, with its own arena-length bound. -/
 def runFor : Nat → Machine → Progress
   | 0, machine => .running machine
   | fuel + 1, machine =>

@@ -4,7 +4,7 @@ namespace MicrosatLean.CDCL
 
 /-- Execute the actual transition until it returns a result. Invariant proofs
 justify recursion and erase at runtime; the return value carries no certificate.
-Result correctness and finite runFor correspondence are proved separately. -/
+Result correctness is proved separately by induction on the same rank. -/
 def run (formula : Formula) (machine : Machine)
     (valid : Verification.Inv formula machine) : SolveResult :=
   match transition : step machine with

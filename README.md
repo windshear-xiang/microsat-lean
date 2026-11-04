@@ -96,8 +96,8 @@ The actual solver is proved correct and terminating for every well-formed
 input; UNSAT excludes every standard CNF assignment. `CDCL.solve` executes this
 proved total runner. There are no admitted proofs, additional axioms, unsafe
 implementations or partial execution drivers. The CDCL core and original C
-reference remain unchanged. `runFor` still provides bounded resumable execution;
-fuel exhaustion is never interpreted as SAT/UNSAT.
+reference remain unchanged. `runFor` supports bounded resumable regression
+tests; fuel exhaustion is never interpreted as SAT/UNSAT.
 
 Read the public framework in this order:
 
@@ -110,7 +110,7 @@ Read the public framework in this order:
 | [`Progress`](MicrosatLean/Verification/Progress.lean) | The `3^n` clause space and step-decrease contract; `Progress/Rank.lean` supplies the shared concrete lexicographic rank |
 | [`Contracts`](MicrosatLean/Verification/Contracts.lean) | Exact logical, initialization, four-phase and rank obligations for the actual solver |
 | [`Termination`](MicrosatLean/Verification/Termination.lean) | Initialization, invariant preservation on running steps and strict rank decrease required by the executable runner |
-| [`Correctness`](MicrosatLean/Verification/Correctness.lean) | Separate proofs of finite `runFor` correspondence and SAT/UNSAT correctness for the actual runner and public solver |
+| [`Correctness`](MicrosatLean/Verification/Correctness.lean) | Direct well-founded correctness proof for the actual runner, composed with initialization and the public solver |
 
 Execution follows `CDCL.solve -> CDCL.solvePure -> CDCL.run -> CDCL.step`.
 [`CDCL/Runner.lean`](MicrosatLean/CDCL/Runner.lean) contains the total recursive
@@ -160,17 +160,15 @@ proved from the implementation. The watch phase requires a real nonroot level
 when its root flag is false; only an idle next-literal phase admits an empty
 nonroot suffix.
 
-`run_finishes` connects `CDCL.run` to finite `runFor` execution, and `run_correct`
-derives result validity from the bounded-execution theorem.
-`solveCertified_correct` is the main pure-solver entry theorem;
-`initialized_search_terminates` gives a finite real `runFor` execution with a
-valid result. `CDCL.solve_correct` connects the same result to the public IO
-wrapper. This theorem lives in `Verification/Correctness`, so callers needing
-proofs import `MicrosatLean.Verification`; executable callers can import only
-`MicrosatLean.Solver`. `solveCertified` and `solveScaffold` are compatibility
-abbreviations for `CDCL.solvePure`, and add no layers to its execution path.
-`solveScaffold_correct` also remains available. Proofs and the termination rank
-erase from runtime code. The boundary starts at bounded `Formula`; DIMACS parsing, filesystem IO,
+`step_correct_with` proves that each step preserves the invariant or returns a
+valid result. `run_correct` follows `CDCL.run` directly by well-founded induction
+on the same rank used to justify its recursion. `solvePure_correct` combines
+this result with initialization, and `CDCL.solve_correct` provides the theorem
+for the public IO wrapper. `runFor` is a bounded test helper outside this proof
+chain. The solver theorems live in `Verification/Correctness`, so callers
+needing proofs import `MicrosatLean.Verification`; executable callers can import
+only `MicrosatLean.Solver`. Proofs and the termination rank erase from runtime
+code. The boundary starts at bounded `Formula`; DIMACS parsing, filesystem IO,
 printing and equivalence to the C implementation remain outside the proof.
 
 Build and audit the full proof graph:

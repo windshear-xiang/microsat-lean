@@ -35,16 +35,11 @@ run_cmd do
   for name in #[`MicrosatLean.Verification.satisfiedBy_iff_models,
       `MicrosatLean.Verification.unsat_iff_complete_models,
       `MicrosatLean.Verification.step_correct_with,
-      `MicrosatLean.Verification.runFor_correct_with,
       `MicrosatLean.Verification.initial_invariant,
       `MicrosatLean.Verification.step_preserves,
       `MicrosatLean.Verification.step_decreases,
-      `MicrosatLean.Verification.run_finishes,
       `MicrosatLean.Verification.run_correct,
-      `MicrosatLean.Verification.initialized_search_correct_with,
-      `MicrosatLean.Verification.solveCertified_correct,
-      `MicrosatLean.Verification.solveScaffold_correct,
-      `MicrosatLean.Verification.initialized_search_terminates,
+      `MicrosatLean.Verification.solvePure_correct,
       `MicrosatLean.CDCL.solve_correct] do
     let info ← getConstInfo name
     unless info.isTheorem do throwError "Expected a correctness theorem: {name}"
@@ -58,8 +53,6 @@ run_cmd do
   logInfo "Only propext, Classical.choice, and Quot.sound are permitted, including in the public IO solver theorem."
 
 #print axioms MicrosatLean.CDCL.run
-#print axioms MicrosatLean.Verification.run_finishes
-#print axioms MicrosatLean.Verification.solveCertified_correct
-#print axioms MicrosatLean.Verification.solveScaffold_correct
-#print axioms MicrosatLean.Verification.initialized_search_terminates
+#print axioms MicrosatLean.Verification.run_correct
+#print axioms MicrosatLean.Verification.solvePure_correct
 #print axioms MicrosatLean.CDCL.solve_correct
