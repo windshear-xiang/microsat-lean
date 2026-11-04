@@ -43,12 +43,6 @@ theorem choose_sat_gate {formula : Formula} {m : CDCL.Machine}
   · intro var lower upper
     exact view_assigned base ordered (covered.zero_all_assigned finished var lower upper)
 
-end MicrosatLean.Verification.Implementation.Search
-
-namespace MicrosatLean.Verification.Implementation.Search
-
-open Bridge
-
 /-- Actual choice refines optional restart and forgetting followed by one
 fresh decision, or reaches the complete propagated SAT boundary. -/
 theorem choose : PhaseCorrect .choose := by
@@ -106,7 +100,7 @@ theorem choose : PhaseCorrect .choose := by
       (m := ⟨prepared.1, prepared.2, .choose, old, root, 0, 0⟩)
       preparedData.certificate preparedData.closed declared.1 declared.2 unset
     have execution := Logic.execution_trans trace decisionTrace
-    have afterNative : Search.Concrete.MachineInvariant formula after := by
+    have afterConcrete : Search.Concrete.MachineInvariant formula after := by
       have outcome := Search.Concrete.step_choose_invariant (concrete_of_certificate certificate) rfl
       rw [Search.Concrete.step_choose_eq] at outcome
       simpa only [prepared, beq_iff_eq, zero, ite_false, Search.Concrete.InvariantProgress,
@@ -116,7 +110,7 @@ theorem choose : PhaseCorrect .choose := by
       rw [Search.Concrete.prepareChoice_nVars]
       exact certificate.representation.variables.symm.trans certificate.variables
     obtain ⟨next, witness, afterCertificate⟩ :=
-      of_concrete certificate.input afterNative afterVariables
+      of_concrete certificate.input afterConcrete afterVariables
     have afterBase := preparedData.certificate.nextDecision prepared.2 nextCursor.declared_or_zero zero
     obtain ⟨afterOrder, afterOrdered⟩ := afterBase.order
     have finalEq := rep_unique

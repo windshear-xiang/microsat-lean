@@ -42,9 +42,4 @@ def controlRank (bound variables : Nat) (m : CDCL.Machine) : Rank :=
 def variant (variables : Nat) (m : CDCL.Machine) : Rank :=
   controlRank (3 ^ variables) variables m
 
-theorem numericProgress_learn {bound count limit : Nat} (room : count < bound) :
-    numericProgress bound (count + 1) limit < numericProgress bound count limit := by
-  unfold numericProgress
-  omega
-
 end MicrosatLean.Verification

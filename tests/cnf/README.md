@@ -13,8 +13,8 @@ negative-test inputs are included.
 
 The largest input has 2,180 declared variables and 6,778 clauses. Sparse-numbering
 cases intentionally leave unused variables. A zero-variable formula with no
-clauses is SAT; a formula containing an empty clause is UNSAT. Those are valid
-inputs that the future parser and solver should handle.
+clauses is SAT; a formula containing an empty clause is UNSAT. Both are valid
+inputs supported by the parser and solver.
 
 ## Expected results and test tiers
 
@@ -34,8 +34,8 @@ hash and any transformations.
 The selection targets decisions within a few seconds on the development machine,
 including the stress tier. Difficulty still depends on the solver: the two
 circuit-fault cases mainly exercise size and mixed clause lengths, and AIM is
-often easy after preprocessing. A future Lean implementation may have different
-performance. A timeout is an inconclusive run, never evidence of UNSAT.
+often easy after preprocessing. A timeout is an inconclusive run, never evidence
+of UNSAT.
 
 The complete selection passed 256 status/model checks with Python 3.12 and
 `python-sat` 1.9.dev15: 128/128 with CaDiCaL 1.9.5 and 128/128 with Glucose 4,
@@ -50,10 +50,6 @@ complete SAT model against the original input:
 ```sh
 python -B tools/test_solver.py
 ```
-
-All 128 native solver cases passed a three-second limit on the development
-machine; the slowest observed case took 1.994 seconds. These are test results,
-not Lean proofs of satisfiability, unsatisfiability, or solver correctness.
 
 ## Validation
 

@@ -81,19 +81,4 @@ def Terminal (formula : Formula) (a : LogicalState) : CDCL.SolveResult → Prop
 def TerminalSoundness : Prop := ∀ formula a result,
   SemanticInv (formulaView formula) a → Terminal formula a result → ValidResult formula result
 
-/-- A semantic rule for forcing the remaining literal of a satisfied clause. -/
-theorem forced_head {valuation : Assignment} {clause : Clause} {head : Literal}
-    (satisfied : Std.Sat.CNF.Clause.Sat valuation clause)
-    (tails : ∀ lit ∈ clause, lit ≠ head → valuation lit.1 ≠ lit.2) :
-    valuation head.1 = head.2 := by
-  obtain ⟨lit, member, truth⟩ := Std.Sat.CNF.Clause.sat_iff_exists_mem_eq.mp satisfied
-  by_cases equal : lit = head
-  · simpa only [equal] using truth
-  · exact False.elim (tails lit member equal truth)
-
-theorem learning_preserves_models {input : CNF} {clause : Clause}
-    (entailed : Std.Sat.CNF.EntailsClause input clause) :
-    Std.Sat.CNF.BiEntails input (input.add clause) :=
-  ⟨Std.Sat.CNF.entails_add_of_entails_clause _ _ entailed, Std.Sat.CNF.add_entails_left⟩
-
 end MicrosatLean.Verification
