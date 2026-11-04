@@ -1,0 +1,6 @@
+c A binary implication cycle is seeded by a positive unit.
+p cnf 3 4
+-1 2 0
+-2 3 0
+-3 1 0
+1 0

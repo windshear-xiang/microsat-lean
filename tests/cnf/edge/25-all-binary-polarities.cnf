@@ -1,0 +1,6 @@
+c All four binary clauses over two variables exclude every assignment.
+p cnf 2 4
+1 2 0
+1 -2 0
+-1 2 0
+-1 -2 0

@@ -1,0 +1,8 @@
+c A clause ends at zero rather than at a newline.
+p cnf 3 2
+1
+2 -3
+0
+-1
+3
+0

@@ -1,0 +1,4 @@
+c Contradicting units at the declared maximum variable.
+p cnf 1024 2
+1024 0
+-1024 0

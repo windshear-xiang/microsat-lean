@@ -1,0 +1,4 @@
+# Preserve fixture bytes, including intentional CRLF and missing final newlines.
+# Trailing whitespace and blank lines are intentional syntax/source coverage.
+/tests/cnf/**/*.cnf -text whitespace=-blank-at-eol,-blank-at-eof
+/tests/cnf/manifest.json text eol=lf

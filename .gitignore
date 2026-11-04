@@ -1,1 +1,4 @@
 /.lake
+/.agent-memory/
+/tmp/
+/AGENTS.md
