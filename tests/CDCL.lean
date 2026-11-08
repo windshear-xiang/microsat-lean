@@ -18,6 +18,13 @@ private def state (f : Formula) : IO State :=
   | .ok none => throw (IO.userError "test expected an initially consistent formula")
   | .error message => throw (IO.userError message)
 
+/-- Iterate `step` until it finishes, with no fuel. `run` needs an invariant
+certificate, which hand-built test machines do not carry. -/
+private partial def drive (machine : Machine) : SolveResult :=
+  match step machine with
+  | .finished result => result
+  | .running next => drive next
+
 private def readClause (s : State) (clauseId : Nat) : Array Lit := Id.run do
   let mut result := #[]
   for i in [clauseId:s.arena.size] do
@@ -178,13 +185,9 @@ private def reductionChecks : IO Unit := do
     check (machine.solver.stats.restarts == 1 && machine.solver.stats.reductions == 1 &&
       machine.solver.nLemmas == 3) "search transition must execute restart and reduction"
     check (validWatches machine.solver) "search reduction must retain valid watch lists"
-    match runFor 1000 machine with
-    | .finished (.sat model _) => check (f.satisfiedBy model) "resumed reduction search returned an invalid model"
-    | _ => throw (IO.userError "resumed reduction search should finish SAT")
-
-private def resume (fuel : Nat) : Progress → Progress
-  | .running machine => runFor fuel machine
-  | result@(.finished _) => result
+    match drive machine with
+    | .sat model _ => check (f.satisfiedBy model) "resumed reduction search returned an invalid model"
+    | .unsat _ => throw (IO.userError "resumed reduction search should finish SAT")
 
 private def bruteForce (f : Formula) : Bool := Id.run do
   for bits in [:2 ^ f.numVars] do
@@ -194,13 +197,12 @@ private def bruteForce (f : Formula) : Bool := Id.run do
     if f.satisfiedBy model then return true
   return false
 
-private def checkResult (f : Formula) (expected : Bool) (progress : Progress) : IO Unit :=
-  match progress with
-  | .running _ => throw (IO.userError "small regression formula exhausted its transition budget")
-  | .finished (.sat model _) => do
-    check expected "bounded search incorrectly classified an UNSAT formula as SAT"
-    check (f.satisfiedBy model) "bounded search returned an invalid SAT model"
-  | .finished (.unsat _) => check (!expected) "bounded search incorrectly classified a SAT formula as UNSAT"
+private def checkResult (f : Formula) (expected : Bool) (result : SolveResult) : IO Unit :=
+  match result with
+  | .sat model _ => do
+    check expected "search incorrectly classified an UNSAT formula as SAT"
+    check (f.satisfiedBy model) "search returned an invalid SAT model"
+  | .unsat _ => check (!expected) "search incorrectly classified a SAT formula as UNSAT"
 
 private def inputChecks : IO Unit := do
   let invalid := #[formula 0 #[#[0]], formula 1 #[#[2]], formula 1 #[#[-2]],
@@ -212,21 +214,16 @@ private def inputChecks : IO Unit := do
   for f in #[formula 0 #[], formula 0 #[#[]]] do
     match ← solve f with
     | .error message => throw (IO.userError message)
-    | .ok result => checkResult f (bruteForce f) (.finished result)
+    | .ok result => checkResult f (bruteForce f) result
 
-private def chunkChecks : IO Unit := do
+/-- Fuel-free stepping from the initial machine, independent of `run`'s invariant. -/
+private def driverChecks : IO Unit := do
   let examples := #[formula 0 #[], formula 4 #[#[1, 2, 3, 4], #[-1], #[-2], #[-3]],
     formula 2 #[#[1, 2], #[1, -2], #[-1, 2], #[-1, -2]],
     formula 3 #[#[2, -1], #[3, -1], #[-2, -3]]]
   for f in examples do
     let s ← state f
-    let machine := Machine.initial s
-    for first in #[0, 1, 2, 7, 31] do
-      for second in #[0, 1, 3, 11, 100] do
-        let combined := runFor (first + second) machine
-        let split := resume second (runFor first machine)
-        check (reprStr combined == reprStr split) "runFor chunking must preserve the entire machine and result"
-    checkResult f (bruteForce f) (runFor 10000 machine)
+    checkResult f (bruteForce f) (drive (Machine.initial s))
 
 private def exhaustiveChecks : IO Unit := do
   -- Every subset of the four unit and four binary clauses over two variables.
@@ -241,11 +238,11 @@ private def exhaustiveChecks : IO Unit := do
     | .error message => throw (IO.userError message)
     | .ok none => check (!expected) "initialization rejected a satisfiable exhaustive formula"
     | .ok (some s) =>
-      checkResult f expected (runFor 10000 (Machine.initial s))
+      checkResult f expected (drive (Machine.initial s))
     for config in #[({} : Config), { initialLemmaLimit := 0, reductionK := 0 }] do
       match ← solve f config with
       | .error message => throw (IO.userError message)
-      | .ok result => checkResult f expected (.finished result)
+      | .ok result => checkResult f expected result
 
 def run : IO Unit := do
   watchChecks
@@ -253,9 +250,9 @@ def run : IO Unit := do
   restartChecks
   reductionChecks
   inputChecks
-  chunkChecks
+  driverChecks
   exhaustiveChecks
-  IO.println "CDCL regressions passed: watches, analysis, restart, reduction, input validation, chunking, and 256 exhaustive formulas including the public solver under two configurations"
+  IO.println "CDCL regressions passed: watches, analysis, restart, reduction, input validation, the step driver, and 256 exhaustive formulas including the public solver under two configurations"
 
 end CDCLTests
 

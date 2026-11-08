@@ -157,15 +157,4 @@ def step (machine : Machine) : Progress := Id.run do
     s := s.decide decision
     return .running ⟨s, decision, .beginPropagation, 0, false, 0, 0⟩
 
-/-- Execute at most `fuel` transitions, returning a resumable machine when the
-budget expires. This helper supports bounded and chunked regression tests;
-fuel exhaustion is never classified as SAT or UNSAT. A watch transition may
-visit several clauses, with its own arena-length bound. -/
-def runFor : Nat → Machine → Progress
-  | 0, machine => .running machine
-  | fuel + 1, machine =>
-    match step machine with
-    | .finished result => .finished result
-    | .running next => runFor fuel next
-
 end MicrosatLean.CDCL

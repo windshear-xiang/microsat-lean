@@ -50,7 +50,7 @@ restart and database reduction are included in the implementation proofs.
 The proof boundary starts at a well-formed `Formula`. DIMACS parsing, filesystem
 IO, printing, returned statistics and equivalence to the C source are outside
 the correctness theorem. Proofs and the termination rank erase from runtime
-code. `runFor` is a bounded helper for resumable regression tests.
+code.
 
 ## Code layout
 
@@ -100,7 +100,7 @@ generated helpers. It rejects admissions and permits only Lean's standard
 `propext`, `Classical.choice` and `Quot.sound` axioms.
 
 Lean regressions cover watches, first-UIP analysis, minimization, backjumping,
-restart, reason relocation, invalid input and chunked execution. They check all
+restart, reason relocation, invalid input and step-by-step execution. They check all
 256 subsets of the eight canonical nonempty clauses on two variables against
 truth tables, including the public solver under two configurations.
 
@@ -108,6 +108,22 @@ The Python runner checks 128 CNF fixtures, 512 deterministic small formulas
 against a brute-force oracle, and 17 malformed inputs. It independently checks
 SAT models and uses a per-instance timeout. Only Python 3.10 or later is needed;
 reports and temporary inputs stay under the ignored `tmp/` directory. See the [corpus documentation](tests/cnf/README.md) for fixture provenance and reproduction.
+
+## Faithful port (in progress, unverified)
+
+[`MicrosatLean/Faithful`](MicrosatLean/Faithful) is a C-shaped port of
+`upstream/microsat.c`: one `DB` array laid out as C lays it out, pointers as
+offsets into it, and C's function names, structure and loops. See
+[`FAITHFUL_PORT_HANDOFF.md`](FAITHFUL_PORT_HANDOFF.md).
+Everything to be proved about it assumes a valid input and the execution model
+in [`ASSUMPTIONS.md`](ASSUMPTIONS.md).
+
+```sh
+lake exe microsat-faithful FILE.cnf          # C's output, plus a model and DB hashes
+python -B tools/diff_faithful.py             # identical output to upstream C?
+python -B tools/bench.py fetch agile_2016 --limit 100
+python -B tools/bench.py run bench/agile_2016 --timeout 60 --jobs 4
+```
 
 ## Upstream
 

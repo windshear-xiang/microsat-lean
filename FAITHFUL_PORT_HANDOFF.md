@@ -213,9 +213,14 @@ Facts we checked with compiled tests (refcount / `dbgTraceIfShared` experiments)
 - Keep `propagate` as **one function**, with the conflict analysis call **inside**
   the watch loop, `return UNSAT`, `continue` and `break` exactly where C has them
   (C:132–158).
-- **Drop** the `Machine` / `Phase` / `step` / `runFor` state machine
-  (`Search.lean`). It exists to make every step total, which the faithful version
-  doesn't need.
+- **Decided (2026-11-04):** every C function exists once, under its C name, in C's
+  order. The only state machine is `solve`'s `for (;;)` (C:162): `step S decision`
+  runs one iteration of its body (C:163–179) and returns `running S decision` or
+  `finished S result`; `run` iterates `step` with no fuel; `solve` is C:161 then
+  `run`. This keeps the transition shape the existing proofs use (`step` + `run`)
+  without splitting `propagate` into the port's four phases.
+- `runFor` is removed from the existing port too (it was only used by
+  `tests/CDCL.lean`, never by the proofs).
 - `analyze` (C:102–130) has `goto build`. Lean has no labeled `break`, so use a
   `Bool` flag (`found := true; break`) that the outer `while` also tests. Note
   this in the code as the one forced deviation.
@@ -328,8 +333,52 @@ From the audit (link in §8), the items that add or change behaviour. File:line 
    - a refinement to the existing `CDCL` port, reusing `solve_correct` / the
      `Verification` proofs.
 
-Assumptions to state in the final spec: memory starts zeroed; no 32-bit overflow
-(or a stated input bound); "out of memory" is an allowed outcome.
+**All assumptions now live in [`ASSUMPTIONS.md`](ASSUMPTIONS.md)** (input validity
+V1–V3, encoded as `Input.Valid` in `MicrosatLean/Faithful/Valid.lean`, and the
+execution-model assumptions E1–E4). That file also records why C needs V3: it loops
+forever on the valid DIMACS file `p cnf 1 2 / 1 0 / 1 1 1 1 0`. Any new assumption
+must be added there first, following its rule.
+
+## 9. Status (2026-11-04)
+
+Steps 1–4 of §8 are implemented, with no proofs:
+
+| File | Contents |
+|---|---|
+| `MicrosatLean/Faithful/Memory.lean` | `CInt`, `Ptr`, C's enum, `abs`, C `&`/`^` on `CInt` (scoped), `struct solver` (C's fields and order, incl. `S.false`), `ld`/`st` |
+| `MicrosatLean/Faithful/Microsat.lean` | `unassign` … `parse`, one Lean function per C function, in C's order, with `C:NN` comments |
+| `FaithfulMain.lean` | C's `main` (`lake exe microsat-faithful FILE [--dump]`) |
+| `tools/microsat_ref.c` | `#include`s `upstream/microsat.c` verbatim, replaces only `main` |
+| `tools/diff_faithful.py` | C vs faithful: whole output must be identical (status, model, stats line, DB hashes after `parse` and at the end) |
+| `tools/bench.py` | Fetch a GBD track (default `agile_2016`), time C / faithful / existing port, compare conflict counts |
+
+Deviations still in the code (each commented where it occurs):
+
+- `goto build` → `gotoBuild` flag; `solve`'s `for (;;)` → `step` + `run`.
+- `run` uses `partial_fixpoint` (real definition with equation `run.eq_1`, no
+  termination proof). `implied` is still a `partial def`: it is not
+  tail-recursive, so it needs an `Option` result or a termination measure.
+- `parse` takes the DIMACS header values and the literal tokens; the character
+  reader is the existing `readDimacsFile` (which also rejects out-of-range literals,
+  where C would write out of bounds).
+- Out of memory and the parse EOF error `panic!` where C prints and exits.
+- `ld`/`st` panic on a negative pointer (C: undefined behaviour); `st` beyond the
+  physical array extends it with zeros (C: writes into the zeroed `malloc` block).
+- C's `/` is `Int.tdiv` (Lean's `Int` `/` rounds toward −∞).
+- Fields C leaves uninitialized (`mem_fixed`, `res`) start at 0.
+
+Results (2026-11-04):
+
+- `tools/diff_faithful.py`: the whole corpus (128 files) plus 15 random 3-SAT
+  instances are identical to C, including both DB hashes (1,032,463 conflicts; 4
+  instances reached `reduceDB`). 5 random instances with n ≥ 235 timed out at 300 s
+  (C alone needs ~74 s on one of them).
+- `tools/bench.py` on a random 100-instance sample of `agile_2016`, 60 s limit,
+  7 parallel jobs: C solves 46, the faithful port 29, the existing port 28. On the
+  instances both solve, conflicts, status and DB hashes always agree with C. The
+  faithful port is ~15x slower than C (median), the existing port ~23x on these
+  instances (~2x on random 3-SAT). `dbgTraceIfShared` shows `DB` is never copied
+  after its first write, so the cost is per-access overhead.
 
 References:
 
