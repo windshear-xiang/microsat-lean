@@ -15,11 +15,12 @@ Stated assumptions (see `FAITHFUL_PORT_HANDOFF.md` §1 and §2):
 
 namespace MicrosatLean.Faithful
 
-/-- C `int`. Unbounded for now; switch to `Int32` here later. -/
-abbrev CInt := Int
+/-- C `int`. Unbounded for now; switch to `Int32` here later. A notation rather than
+an `abbrev`, so that `omega` and `simp` see `Int` directly in proofs. -/
+notation "CInt" => Int
 
 /-- A C `int*`, modelled as an offset into `DB`. -/
-abbrev Ptr := Int
+notation "Ptr" => Int
 
 -- C:30  enum { END = -9, UNSAT = 0, SAT = 1, MARK = 2, IMPLIED = 6 };
 abbrev END : CInt := -9
@@ -67,13 +68,20 @@ structure solver where
   slow : CInt
   deriving Inhabited
 
+/-- `panic!` that, after reporting `msg`, continues with `fallback` rather than an
+arbitrary default. Used where C exits or has undefined behaviour (out of memory, a
+negative pointer): the theorems exclude those cases, and continuing with the
+unchanged state keeps every other field unaffected in proofs. -/
+@[inline] def panicWith {α : Type} (fallback : α) (msg : String) : α :=
+  @panic α ⟨fallback⟩ msg
+
 namespace solver
 
 /-- `*p`. Cells beyond the physical array are the zeroed rest of C's block.
 A negative pointer is outside C's block: it never happens in a valid state
 (a proof obligation), and panics here so testing exposes it. -/
 @[inline] def ld (S : solver) (p : Ptr) : CInt :=
-  if p < 0 then panic! "ld: negative pointer" else S.DB.getD p.toNat 0
+  if p < 0 then panicWith 0 "ld: negative pointer" else S.DB.getD p.toNat 0
 
 /-- Extend the physical array with zero cells up to index `i`, then store `v` at
 `i`. Only called when `i` is at or beyond the physical size. -/
@@ -84,7 +92,7 @@ def growAndStore (DB : Array CInt) (i : Nat) (v : CInt) : Array CInt :=
 cells it already reads as, so `DB` behaves like C's zeroed `mem_max` block.
 `DB` is never shrunk: C keeps old contents past `mem_used` (see `reduceDB`). -/
 @[inline] def st (S : solver) (p : Ptr) (v : CInt) : solver :=
-  if p < 0 then panic! "st: negative pointer"
+  if p < 0 then panicWith S "st: negative pointer"
   else
     let i := p.toNat
     if h : i < S.DB.size then { S with DB := S.DB.set i v h }

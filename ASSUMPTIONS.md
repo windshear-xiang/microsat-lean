@@ -61,7 +61,7 @@ so that proofs never reason about the overflow.)
 |---|---|---|
 | E1 | `DB` starts zeroed (a fresh `malloc` of `mem_max` cells comes from zero pages). C relies on it, e.g. C:133 reads `reason[abs(*processed)]` before any write, and C:204. | `solver.ld` returns 0 beyond the physical array; `solver.st` extends it with zeros |
 | E2 | Integers do not overflow: `CInt` is `Int` (unbounded) while C's `int` is 32-bit. To be discharged later by switching `CInt` to `Int32` and bounding values (e.g. `fast += lbd << 15`). | `abbrev CInt` in `MicrosatLean/Faithful/Memory.lean` |
-| E3 | Out of memory (`mem_used` would exceed `mem_max = 2^30` cells) is an allowed outcome. C prints `c out of memory` and exits; the Lean port currently panics. | `getMemory` |
+| E3 | Enough memory: the theorems hold when `mem_max` (C's constant `1 << 30`) is at least an explicit bound computed from the input (`memoryBound`, roughly the input clauses plus `3^nVars` lemmas). Below that bound C may print `c out of memory` and exit (the Lean port panics); the theorems say nothing about that case. | `initCDCL`/`parse` take `mem_max` as a parameter defaulting to `1 <<< 30`; `memoryBound` in `MicrosatLean/Faithful/Verification/Invariant.lean` |
 | E4 | Character-level DIMACS reading (`fscanf("%i")`, comments, header search in C:216–233) is outside the model. `parse` starts from `Input.tokens` of a valid input. | `parse`, `FaithfulMain.lean` |
 
 ## Change log
@@ -69,3 +69,15 @@ so that proofs never reason about the overflow.)
 - 2026-11-08: V1–V3 introduced (input validity decided by Henry: no repeated
   literals, at most `nVars` literals per clause, on top of well-formed DIMACS).
   E1–E4 carried over from `FAITHFUL_PORT_HANDOFF.md`.
+- 2026-11-08: E3 made precise (decided by Henry): `mem_max` is a parameter of
+  `initCDCL`/`parse` (default `1 <<< 30`, as in C), and the theorems assume
+  `memoryBound input ≤ mem_max` instead of treating out of memory as an outcome.
+- 2026-11-08: no new assumption while proving `parse`, `step`, `restart`, `reduceDB`,
+  the decision and `propagate`. The facts added to the loop invariant (`false[0] = 0`,
+  non-empty input records, same-level reason literals, record orientation, `Mode`) are
+  all established by `parse` from V1–V3; V3 also bounds the literal scan of an input
+  clause (`Core.record_length_le`).
+- 2026-11-08: no new assumption while proving `analyze`, `implied` and `bump`, which
+  closed the last gap: the whole development is `sorry`-free, and the main theorems
+  (`Verification/Main.lean`) depend only on `propext`, `Classical.choice` and
+  `Quot.sound`, under `input.Valid` (V1–V3) and E3.

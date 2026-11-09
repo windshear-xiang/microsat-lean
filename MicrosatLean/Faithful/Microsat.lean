@@ -23,9 +23,12 @@ Deviations, kept to the ones Lean forces:
 * `solve`'s `for (;;)` (C:162) is split into `step` (one iteration of its body)
   and `run` (the loop), so that proofs can later treat `step` as a transition.
 * `parse` (C:216) starts from DIMACS tokens. Reading characters is deferred.
-* Out of memory (C:53) and parse errors (C:233) panic, where C exits.
-* `implied` (not tail-recursive) is a `partial def` for now; `run` uses
-  `partial_fixpoint`, so it has an unfolding equation without a termination proof.
+* Out of memory (C:53) and parse errors (C:233) panic, where C exits; after an
+  out-of-memory panic the state is left unchanged (`panicWith`).
+* `run` and `implied` are defined by `partial_fixpoint` (unfolding equations, no
+  termination proof needed to define them). `implied` is not tail-recursive, so it
+  returns an `Option` (`none` = C's recursion does not return, unreachable on valid
+  states) and its `while (*(++p))` loop is the tail-recursive helper `impliedLoop`.
 -/
 
 namespace MicrosatLean.Faithful
@@ -66,7 +69,7 @@ def assign (S : solver) (reason : Ptr) (forced : CInt) : solver := Id.run do
 /-- Allocate memory of size `mem_size`; returns the pointer `store`. -/
 def getMemory (S : solver) (mem_size : CInt) : solver × Ptr :=
   if S.mem_used + mem_size > S.mem_max then
-    panic! "c out of memory"                       -- C:54 prints and exits (deferred)
+    panicWith (S, S.mem_used) "c out of memory"    -- C:54 prints and exits (E3)
   else
     let store : Ptr := S.mem_used                  -- store = S->DB + S->mem_used
     ({ S with mem_used := S.mem_used + mem_size }, store)
@@ -138,25 +141,36 @@ def bump (S : solver) (lit : CInt) : solver := Id.run do
   return S
 
 -- C:93–100
-/-- Check if lit(eral) is implied by MARK literals. -/
-partial def implied (S : solver) (lit : CInt) : solver × CInt := Id.run do
+mutual
+/-- Check if lit(eral) is implied by MARK literals. `none` would mean C's recursion
+never returns; for valid states it always returns (proved: `implied_spec`). On `none`
+`analyze` continues with a dummy state: a fallback that mentioned `S` would keep a
+second reference to it during the call, so that every write in `implied` would copy
+`DB`. The `while (*(++p))` loop (C:97) is the
+tail-recursive `impliedLoop`: Lean can only define this non-tail recursion by
+`partial_fixpoint` in `Option`, which does not reach into `while` loops. -/
+def implied (S : solver) (lit : CInt) : Option (solver × CInt) :=
   if S.ld (S.false + lit) > MARK then                -- if checked before return old result
-    return (S, S.ld (S.false + lit) &&& MARK)
-  if S.ld (S.reason + abs lit) == 0 then             -- in case lit is a decision, it is not implied
-    return (S, 0)
-  let mut S := S
-  let mut p : Ptr := S.ld (S.reason + abs lit) - 1   -- get the reason of lit(eral)
-  repeat                                             -- while (*(++p))
-    p := p + 1
-    if S.ld p == 0 then break
-    if (S.ld (S.false + S.ld p) ^^^ MARK) != 0 then  -- recursively check if non-MARK literals are implied
-      let mut r : CInt := 0
-      (S, r) := implied S (S.ld p)
-      if r == 0 then
-        S := S.st (S.false + lit) (IMPLIED - 1)      -- mark and return not implied (IMPLIED - 1)
-        return (S, 0)
-  S := S.st (S.false + lit) IMPLIED                  -- mark and return that the literal is implied
-  return (S, 1)
+    some (S, S.ld (S.false + lit) &&& MARK)
+  else if S.ld (S.reason + abs lit) == 0 then        -- in case lit is a decision, it is not implied
+    some (S, 0)
+  else
+    impliedLoop S lit (S.ld (S.reason + abs lit) - 1)  -- get the reason of lit(eral)
+partial_fixpoint
+
+/-- C:97–100: `while (*(++p))`, with `p` one before the next reason literal. -/
+def impliedLoop (S : solver) (lit : CInt) (p : Ptr) : Option (solver × CInt) := do
+  let p := p + 1
+  if S.ld p == 0 then                                -- end of the reason: mark lit IMPLIED
+    return (S.st (S.false + lit) IMPLIED, 1)
+  if (S.ld (S.false + S.ld p) ^^^ MARK) != 0 then    -- recursively check if non-MARK literals are implied
+    let (S, r) ← implied S (S.ld p)
+    if r == 0 then                                   -- mark and return not implied (IMPLIED - 1)
+      return (S.st (S.false + lit) (IMPLIED - 1), 0)
+    impliedLoop S lit p
+  else impliedLoop S lit p
+partial_fixpoint
+end
 
 -- C:102–130
 /-- Compute a resolvent from falsified clause; returns a pointer to the lemma. -/
@@ -196,7 +210,7 @@ def analyze (S : solver) (clause : Ptr) : solver × Ptr := Id.run do
   while p ≥ S.forced do                              -- only literals on the stack can be MARKed
     if S.ld (S.false + S.ld p) == MARK then          -- if MARKed and not implied
       let mut r : CInt := 0
-      (S, r) := implied S (S.ld p)
+      (S, r) := (implied S (S.ld p)).getD (default, 0)
       if r == 0 then
         S := S.st (S.buffer + size) (S.ld p)         -- add literal to conflict clause buffer
         size := size + 1
@@ -318,14 +332,16 @@ def solve (S : solver) : solver × CInt :=
 
 -- C:181–210
 /-- Allocate and initialize the solver. Fields C leaves uninitialized
-(`mem_fixed` until the first input clause, `res` until `solve`) start at 0. -/
-def initCDCL (n m : CInt) : solver := Id.run do
+(`mem_fixed` until the first input clause, `res` until `solve`) start at 0.
+`mem_max` is C's constant `1 << 30` by default; it is a parameter so that the
+proofs can state how much memory suffices (`ASSUMPTIONS.md`, E3). -/
+def initCDCL (n m : CInt) (mem_max : CInt := 1 <<< 30) : solver := Id.run do
   let n := if n < 1 then 1 else n                    -- the code assumes that there is at least one variable
   let mut S : solver := {
     DB := #[]                                        -- malloc: an all-zero block (see `ld`/`st`)
     nVars := n                                       -- set the number of variables
     nClauses := m                                    -- set the number of clauses
-    mem_max := 1 <<< 30                              -- set the initial maximum memory
+    mem_max := mem_max                               -- set the initial maximum memory (C: 1 << 30)
     mem_used := 0                                    -- the number of integers allocated in the DB
     nLemmas := 0                                     -- the number of learned clauses
     nConflicts := 0                                  -- number of conflicts used to update scores
@@ -365,8 +381,9 @@ def initCDCL (n m : CInt) : solver := Id.run do
 /-- Initialize from a DIMACS header (`nVars`, `nClauses`) and the literal tokens
 that follow it, with `0` ending each clause. This is C's `parse` after its
 character-level reading (C:217–222, C:227–231), which is deferred. -/
-def parse (nVars nClauses : CInt) (tokens : Array CInt) : solver × CInt := Id.run do
-  let mut S := initCDCL nVars nClauses               -- allocate the main datastructures
+def parse (nVars nClauses : CInt) (tokens : Array CInt) (mem_max : CInt := 1 <<< 30) :
+    solver × CInt := Id.run do
+  let mut S := initCDCL nVars nClauses mem_max       -- allocate the main datastructures
   let mut nZeros := S.nClauses                       -- initialize the number of clauses to read
   let mut size : CInt := 0
   let mut next : Nat := 0                            -- position in the token stream

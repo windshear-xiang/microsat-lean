@@ -387,3 +387,57 @@ References:
 - Branch `Tim-dev-verification` has the fully proved version of the current port
   (`solveVerified_correct`, no `sorry`). `Tim-dev3` (this branch's base) has the
   restructured proof layer.
+
+## 10. Proof status (2026-11-08, 08:00)
+
+**The development is complete: no `sorry` anywhere.** `Main.lean` proves termination,
+SAT/UNSAT soundness and completeness of `microsat` (C's `main` without printing); the
+main theorems depend only on `propext`, `Classical.choice` and `Quot.sound` (checked
+with `#print axioms`). They assume only `input.Valid` (V1–V3) and
+`memoryBound input ≤ mem_max` (E3). Build and check:
+`lake build MicrosatLean.Faithful.Verification.Main` (neither the default target nor
+`lake build MicrosatLean` imports the faithful port's proofs).
+
+Files in `MicrosatLean/Faithful/Verification/` (dependency order):
+
+| File | Content |
+|---|---|
+| `Spec.lean`, `Run.lean`, `Main.lean` | semantics, `RunsTo`, final theorems |
+| `Layout`, `Database`, `Trail`, `Order`, `Invariant` | `Core`, `Mode`, `Inv`, `Settled`, `rank` |
+| `Memory`, `Frame`, `Regions`, `LowFrame`, `Lists` | memory algebra, frame lemmas, list surgery |
+| `AddClause`, `AddRecord`, `Assign`, `Push` | `addClause`, appending a record, `assign` as a trail push |
+| `InitCDCL`, `ParseInv`, `ParseStep`, `ParseFinal`, `Init` | `parse_correct` |
+| `Clauses`, `Counting`, `LemmaCount` | record facts, `3^n` lemma bound, `mem_used ≤ mem_max` |
+| `Decide` | decision scan (C:173–174), SAT model, decision push |
+| `Restart`, `ReduceDB` | `restart`; `reduceDB` (raise, unlink, keep) |
+| `PropagateInv`, `PropagateLoop`, `Visit*`, `Update`, `Propagate` | `propagate_spec` |
+| `Bump` | `bump` keeps the decision order (move to front) |
+| `Implied` | `implied`: terminates, drops only literals implied by MARKs, never the first UIP |
+| `Analyze` | `analyzeCore` (C:103–129), `analyze_eq`, the contract `Analyzed` |
+| `AnalyzeState`, `AnalyzeResolve`, `AnalyzeBuild`, `AnalyzeLoop` | loop invariants and steps of `analyze`; `analyzeCore_spec` |
+| `Conflict` | `Visit.conflict_step`: `analyze`, `addClause` and `assign` after a conflict |
+| `Step` | `step_preserves`, `step_decreases`, `step_finished` |
+
+Invariant facts added while proving (all established by `parse`, none restricts the
+input): `false[0] = 0` (the decision scan stops on it), `model[v] ≠ 0 ↔ v true`,
+input records non-empty, `maxLemmas ≥ 0`, a same-level reason literal for every
+implied non-root literal (keeps `implied` from dropping the UIP), `Mode` (where
+`solve`'s loop is: before the first `propagate`, or right after a decision), and a
+per-record orientation `Records.flip`: `propagate` moves the visited literal to position
+1 without moving links (C:141–151), so a record's two link cells may be crossed.
+
+How `analyze` is proved: `mvcgen` splits `analyzeCore` into its six loops. The MARKed
+literals always form an entailed clause (resolution with reasons, root literals being
+false in every model); the walk stops at the first UIP, the only MARK at the last
+decision level. During minimization `implied` caches answers whose meaning is `Imp`
+(false whenever the MARKs below are false), so the collected clause stays entailed, and
+by the same-level reason literals it never removes the UIP. The backjump point is the
+lowest decision above the second-highest literal. The learned clause is new because a
+database clause with the same literals would contradict the watched-literal invariant
+below the backjump point; with `lemmas_size_le` this gives the memory `addClause` needs.
+
+Limitation of E3: `memoryBound` counts `3^n` lemma records, so with C's default
+`mem_max = 1 << 30` the hypothesis holds only up to about 16 variables. In the worst case
+microsat's live lemmas are not bounded by anything smaller (`maxLemmas` grows by 300 at
+every `reduceDB`), so covering larger inputs would mean treating `c out of memory` as a
+possible outcome in the statement instead of assuming it away.
