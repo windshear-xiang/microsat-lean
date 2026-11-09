@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
-"""Cluster benchmark: upstream C vs the faithful Lean port vs the existing Lean port.
+"""Cluster benchmark: upstream C vs Lean ports (faithful, existing, fast; `prepare --lean`).
 
 Runs on Babel under Slurm (partition `preempt`, QoS `preempt_cpu_qos`, CPU only).
 For each instance, one task runs, on one core, one after another:
 
   1. C, with limit --c-timeout (default 5000 s);
-  2. only if C solved it: the faithful port, then the existing port, each with the
-     limit clamp(--factor * C's CPU time, --min, --max) (default 100x, 600 s, 24 h).
+  2. only if C solved it: the Lean ports chosen with `prepare --lean` (default: the
+     faithful port, then the existing port), each with the limit
+     clamp(--factor * C's CPU time, --min, --max) (default 100x, 600 s, 24 h).
+
+With `prepare --c-from RUN`, C is not run again: each instance reuses C's result from RUN
+(marked `reused`), and only instances missing there run C.
+
+Each shard runs its most expensive instances first (cost: file size, or C's CPU time in
+an earlier run given with `prepare --cost-from`).
 
 Jobs are resumable: a result line is appended (and fsynced) per finished instance,
 and a requeued or resubmitted job skips instances that are already done. A task
@@ -50,8 +57,10 @@ SOLVERS = {
     "c": ["microsat-ref"],
     "faithful": ["microsat-faithful"],
     "port": ["microsat-lean", "--stats", "--no-model"],
+    "fast": ["microsat-fast"],
 }
-LEAN = ("faithful", "port")
+BUILD = {"faithful": "microsat-faithful", "port": "microsat-lean", "fast": "microsat-fast"}
+LEAN = ("faithful", "port")          # default Lean solvers of a run
 SOLVED = ("SAT", "UNSAT")
 
 
@@ -177,11 +186,11 @@ def prepare(args: argparse.Namespace) -> int:
         print(f"{run} already has results; use --force to replace its setup", file=sys.stderr)
         return 1
     (run / "bin").mkdir(parents=True, exist_ok=True)
-    subprocess.run(["lake", "build", "microsat-faithful", "microsat-lean"], cwd=ROOT, check=True,
-                   stdout=subprocess.DEVNULL)
+    targets = [BUILD[s] for s in args.lean]
+    subprocess.run(["lake", "build", *targets], cwd=ROOT, check=True, stdout=subprocess.DEVNULL)
     subprocess.run(["gcc", "-O2", "-std=gnu99", "-w", "tools/microsat_ref.c", "-o",
                     str(run / "bin" / "microsat-ref")], cwd=ROOT, check=True)
-    for name in ("microsat-faithful", "microsat-lean"):
+    for name in targets:
         shutil.copy2(ROOT / ".lake" / "build" / "bin" / name, run / "bin" / name)
 
     instances = []
@@ -203,12 +212,29 @@ def prepare(args: argparse.Namespace) -> int:
         "gcc": subprocess.run(["gcc", "--version"], capture_output=True, text=True).stdout.splitlines()[0],
         "binaries": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((run / "bin").iterdir())},
         "limits": {"c_timeout": args.c_timeout, "factor": args.factor, "min": args.min, "max": args.max},
+        "lean_solvers": args.lean,
         "instances": {name: sum(set_name(i) == name for i in instances)
                       for name in sorted({set_name(i) for i in instances})},
         "invalid_inputs": invalid,   # ASSUMPTIONS.md section 1
     }
     (run / "meta.json").write_text(json.dumps(meta, indent=2) + "\n")
-    tasks = [{"id": i, "set": set_name(i), "cost": (ROOT / i).stat().st_size} for i in instances]
+    earlier = {}
+    if args.cost_from:
+        for row in all_results(RUNS / args.cost_from).values():
+            c = next((r for r in row["runs"] if r["solver"] == "c"), None)
+            if c is not None:
+                earlier[row["id"]] = c["cpu"]
+    tasks = [{"id": i, "set": set_name(i),
+              "cost": earlier.get(i, (ROOT / i).stat().st_size)} for i in instances]
+    if args.c_from:
+        for row in all_results(RUNS / args.c_from).values():
+            c = next((r for r in row["runs"] if r["solver"] == "c"), None)
+            for t in tasks:
+                if t["id"] == row["id"] and c is not None:
+                    t["c"] = dict(c, reused=True, from_run=args.c_from, host=row["host"],
+                                  cpu_model=row["cpu_model"])
+        meta["c_from"] = args.c_from
+        (run / "meta.json").write_text(json.dumps(meta, indent=2) + "\n")
     (run / "tasks.jsonl").write_text("".join(json.dumps(t) + "\n" for t in tasks))
     print(f"{len(instances)} instances ({len(instances) - len(invalid)} valid inputs, V1-V3); "
           f"C limit {args.c_timeout:g} s; Lean limit clamp({args.factor:g} x C, {args.min:g} s, "
@@ -218,7 +244,9 @@ def prepare(args: argparse.Namespace) -> int:
 
 def shard(args: argparse.Namespace) -> int:
     run = RUNS / args.run
-    limits = json.loads((run / "meta.json").read_text())["limits"]
+    meta = json.loads((run / "meta.json").read_text())
+    limits = meta["limits"]
+    lean = meta.get("lean_solvers", list(LEAN))
     tasks = read_jsonl(run / "tasks.jsonl")
     tasks.sort(key=lambda t: (t["cost"], t["id"]))     # round-robin over size spreads the load
     mine = tasks[args.shard::args.shards]
@@ -228,7 +256,7 @@ def shard(args: argparse.Namespace) -> int:
         if text and not text.endswith("\n"):
             out.write_text(text[: text.rfind("\n") + 1])
     done = {row["id"] for row in read_jsonl(out)}
-    todo = [t for t in mine if t["id"] not in done]
+    todo = sorted((t for t in mine if t["id"] not in done), key=lambda t: -t["cost"])  # longest first
     host, cpu, job = socket.gethostname(), cpu_model(), os.environ.get("SLURM_JOB_ID", "")
     print(f"[{time.strftime('%F %T')}] shard {args.shard}/{args.shards} on {host} ({cpu}), job {job}: "
           f"{len(mine)} instances, {len(done)} done, {len(todo)} to run, {args.workers} in parallel",
@@ -238,10 +266,13 @@ def shard(args: argparse.Namespace) -> int:
 
     def work(task: dict) -> None:
         cnf = ROOT / task["id"]
-        runs = [run_solver(run / "bin", "c", cnf, limits["c_timeout"])]
+        if "c" in task:                                # C's result from an earlier run
+            runs = [task["c"]]
+        else:
+            runs = [run_solver(run / "bin", "c", cnf, limits["c_timeout"])]
         if runs[0]["status"] in SOLVED:
             limit = min(max(limits["factor"] * runs[0]["cpu"], limits["min"]), limits["max"])
-            runs += [run_solver(run / "bin", s, cnf, limit) for s in LEAN]
+            runs += [run_solver(run / "bin", s, cnf, limit) for s in lean]
         row = {"id": task["id"], "set": task["set"], "host": host, "cpu_model": cpu, "job": job,
                "finished": time.strftime("%F %T"), "runs": runs}
         with lock:
@@ -283,6 +314,7 @@ def report(args: argparse.Namespace) -> int:
     run = RUNS / args.run
     meta = json.loads((run / "meta.json").read_text())
     invalid = meta.get("invalid_inputs", {})
+    lean = meta.get("lean_solvers", list(LEAN))
     results = all_results(run)
     if not results:
         print("no results yet")
@@ -296,8 +328,8 @@ def report(args: argparse.Namespace) -> int:
             r = runs.get(s, {})
             for field in ("status", "limit", "cpu", "wall", "conflicts", "maxrss_kb"):
                 rec[f"{s}_{field}"] = r.get(field)
-        rec["faithful_hashes_match"] = (runs["faithful"]["hashes"] == runs["c"]["hashes"]
-                                        if "faithful" in runs else None)
+        for s in ("faithful", "fast"):
+            rec[f"{s}_hashes_match"] = runs[s]["hashes"] == runs["c"]["hashes"] if s in runs else None
         table.append(rec)
     with (run / "results.csv").open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(table[0]))
@@ -312,14 +344,14 @@ def report(args: argparse.Namespace) -> int:
         print(f"\n{name}: {len(rows)} instances; C: SAT {sum(r['c_status'] == 'SAT' for r in rows)}, "
               f"UNSAT {sum(r['c_status'] == 'UNSAT' for r in rows)}, "
               f"timeout {sum(r['c_status'] == 'TIMEOUT' for r in rows)}")
-        for s in LEAN:
+        for s in lean:
             fin = [r for r in c_ok if r[f"{s}_status"] in SOLVED]
             tout = sum(r[f"{s}_status"] == "TIMEOUT" for r in c_ok)
             agree = sum(r[f"{s}_conflicts"] == r["c_conflicts"] and r[f"{s}_status"] == r["c_status"] for r in fin)
             line = (f"  {s:<9} of {len(c_ok)} solved by C: finished {len(fin)}, timeout {tout}; "
                     f"same status+conflicts as C {agree}/{len(fin)}")
-            if s == "faithful":
-                line += f"; DB hashes match {sum(bool(r['faithful_hashes_match']) for r in fin)}/{len(fin)}"
+            if s in ("faithful", "fast"):
+                line += f"; DB hashes match {sum(bool(r[f'{s}_hashes_match']) for r in fin)}/{len(fin)}"
             print(line)
             ratios = [r[f"{s}_cpu"] / r["c_cpu"] for r in fin if r["c_cpu"] >= args.min_c]
             if ratios:
@@ -348,6 +380,10 @@ def main() -> int:
     p.add_argument("--min", type=float, default=600.0, help="... but at least this (s)")
     p.add_argument("--max", type=float, default=86400.0, help="... and at most this (s)")
     p.add_argument("--force", action="store_true")
+    p.add_argument("--lean", nargs="+", default=list(LEAN), choices=sorted(BUILD),
+                   help="Lean solvers to run after C (default: faithful port)")
+    p.add_argument("--cost-from", help="earlier run whose C times order the tasks")
+    p.add_argument("--c-from", help="earlier run whose C results are reused (C is not run again)")
     p = sub.add_parser("shard")
     p.add_argument("run")
     p.add_argument("shard", type=int)

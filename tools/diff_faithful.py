@@ -24,8 +24,8 @@ REF_BIN = ROOT / ".lake" / "build" / "bin" / "microsat-ref"
 LEAN_BIN = ROOT / ".lake" / "build" / "bin" / "microsat-faithful"
 
 
-def build() -> None:
-    subprocess.run(["lake", "build", "microsat-faithful"], cwd=ROOT, check=True,
+def build(target: str = "microsat-faithful") -> None:
+    subprocess.run(["lake", "build", target], cwd=ROOT, check=True,
                    stdout=subprocess.DEVNULL)
     REF_BIN.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(["gcc", "-O2", "-std=gnu99", "-w", str(REF_SRC), "-o", str(REF_BIN)],
@@ -65,10 +65,13 @@ def main() -> int:
     parser.add_argument("--max-vars", type=int, default=210)
     parser.add_argument("--timeout", type=float, default=600.0)
     parser.add_argument("--no-build", action="store_true")
+    parser.add_argument("--lean-bin", default="microsat-faithful",
+                        help="Lean executable to compare with C (e.g. microsat-fast)")
     args = parser.parse_args()
 
+    lean_bin = LEAN_BIN.parent / args.lean_bin
     if not args.no_build:
-        build()
+        build(args.lean_bin)
 
     roots = args.paths or [ROOT / "tests" / "cnf"]
     files: list[Path] = []
@@ -88,7 +91,7 @@ def main() -> int:
         for cnf in files:
             try:
                 expected = run(REF_BIN, cnf, args.timeout)
-                actual = run(LEAN_BIN, cnf, args.timeout)
+                actual = run(lean_bin, cnf, args.timeout)
             except subprocess.TimeoutExpired:
                 print(f"TIMEOUT {cnf}")
                 failures += 1
@@ -97,7 +100,8 @@ def main() -> int:
                 print(f"ERROR   {cnf}: {error}")
                 failures += 1
                 continue
-            name = cnf.name if cnf.is_relative_to(tmp) else cnf.relative_to(ROOT)
+            cnf = cnf.resolve()
+            name = cnf.name if cnf.is_relative_to(Path(tmp).resolve()) else cnf.relative_to(ROOT)
             conflicts = stat(expected, "conflicts")
             max_lemmas = stat(expected, "max_lemmas")
             if expected == actual:

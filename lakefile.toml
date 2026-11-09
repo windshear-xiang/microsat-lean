@@ -16,3 +16,7 @@ root = "tests.CDCL"
 [[lean_exe]]
 name = "microsat-faithful"
 root = "FaithfulMain"
+
+[[lean_exe]]
+name = "microsat-fast"
+root = "FastMain"
