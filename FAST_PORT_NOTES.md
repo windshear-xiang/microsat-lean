@@ -33,7 +33,10 @@ soundness and completeness theorems proved again for it.
     takes about 21 s;
   - `--sat` adds three longer SAT instances.
 - The C reference is `tools/microsat_ref.c`, built with `gcc -O2`.
-- Dev node: AMD EPYC 9354. Times are CPU seconds.
+- Dev nodes vary. Steps 0–4 were measured on an AMD EPYC 9354 node. Later quick-bench runs
+  (1.60× geometric mean) were on an Intel Xeon E5-2670 v3 node, an older CPU where the fast
+  port's extra memory traffic costs more. Always record the CPU (`grep "model name"
+  /proc/cpuinfo`) with a timing. Times are CPU seconds.
 
 ## Log
 
@@ -153,6 +156,31 @@ with `nVars ≥ 2^31` could become a small variable count. The fast `parse` now:
 
 For a valid input, `nVars` and every literal are then converted exactly. There is no
 measurable cost (it runs once).
+
+### Step 6: full benchmark (2026-11-09)
+
+100 random instances of the SAT Competition 2016 Agile track, one core per run.
+- **Cluster** (`bench/runs/agile100`, `bench/runs/fast100`):
+  - C solves 98 within 5,000 s. All three Lean ports solve the same 98, with the same answers
+    and conflict counts.
+  - The faithful and fast ports also match C's memory hashes.
+  - On the 97 instances run on cluster nodes, as geometric mean of CPU time vs C:
+
+    | Port | Geometric mean | Median |
+    |---|---|---|
+    | Existing | 27.8× | 29.3× |
+    | Faithful | 18.2× | 17.6× |
+    | Fast | 1.3× | 1.3× |
+
+  - The fast port ran on other EPYC nodes than C (C, existing and faithful share a node per
+    instance), so its ratio is approximate.
+  - The 98th instance (`e0c1d2de…`, C 3,295 s) was run for the fast port on the dev node,
+    with an identical output.
+- **One machine** (Intel Xeon E5-2670 v3, the 15-instance quick subset, all outputs
+  identical): existing 23.8×, faithful 24.0×, fast 1.59×. The two slow ports ran two at a
+  time, C and the fast port alone.
+- The slides for presenting this are the Artifact "Microsat in Lean" (sources in the ignored
+  `tmp/deck/`).
 
 ## Correctness plan
 
